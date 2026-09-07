@@ -18,18 +18,11 @@ Le kit est conçu pour retrouver la même session de travail depuis plusieurs ap
 
 ## Installation
 
-### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/pav67/configs.git
-cd configs
-```
-
-### 2. Lancer l'installation
-
-```bash
-chmod +x install.sh
-./install.sh
+git clone git@github.com:pav67/configs.git ~/configs \
+  && cd ~/configs \
+  && ./install.sh
 ```
 
 > Ne pas lancer `install.sh` avec `sudo`.
