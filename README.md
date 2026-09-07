@@ -20,7 +20,7 @@ Le kit est conçu pour retrouver la même session de travail depuis plusieurs ap
 
 
 ```bash
-git clone git@github.com:pav67/configs.git ~/configs \
+git clone https://github.com/pav67/configs.git ~/configs \
   && cd ~/configs \
   && chmod +x install.sh \
   && ./install.sh
