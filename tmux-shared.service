@@ -1,0 +1,13 @@
+[Unit]
+Description=Persistent shared tmux session
+After=default.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=TMUX_SHARED_SESSION=shared
+ExecStart=/bin/sh -lc '/usr/bin/tmux has-session -t "$TMUX_SHARED_SESSION" 2>/dev/null || /usr/bin/tmux new-session -d -s "$TMUX_SHARED_SESSION"'
+ExecStop=/bin/sh -lc '/usr/bin/tmux has-session -t "$TMUX_SHARED_SESSION" 2>/dev/null && /usr/bin/tmux kill-session -t "$TMUX_SHARED_SESSION" || true'
+
+[Install]
+WantedBy=default.target
