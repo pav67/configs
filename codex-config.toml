@@ -1,0 +1,15 @@
+model = "gpt-6-astra"
+model_reasoning_effort = "medium"
+
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
+[tui]
+animations = true
+terminal_title = ["spinner", "app-name"]
+notifications = ["agent-turn-complete", "approval-requested"]
+notification_method = "bel"
+notification_condition = "always"

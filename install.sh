@@ -5,7 +5,9 @@ SESSION_NAME="${TMUX_SHARED_SESSION:-shared}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/tmux-shared.service"
-BACKUP_TS="$(date +%Y%m%d-%H%M%S)"
+BACKUP_TS="$(date +%Y%m%d-%H%M%S)-$$"
+export PATH="$HOME/.local/bin:$PATH"
+[[ "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Nom de session invalide" >&2; exit 1; }
 
 log() {
     printf '[shell-kit] %s\n' "$*"
@@ -26,25 +28,50 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 install_packages() {
-    log "Installation des dépendances : tmux, vim, zsh, git, curl, python3..."
+    log "Installation des dépendances : tmux, vim, neovim, zsh et outils shell..."
 
     if command -v apt-get >/dev/null 2>&1; then
         sudo apt-get update
-        sudo apt-get install -y tmux vim zsh git curl python3
+        sudo apt-get install -y tmux vim neovim zsh git curl python3 ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y tmux vim-enhanced zsh git curl python3
+        sudo dnf install -y tmux vim-enhanced neovim zsh git curl python3 ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v yum >/dev/null 2>&1; then
-        sudo yum install -y tmux vim-enhanced zsh git curl python3
+        sudo yum install -y tmux vim-enhanced neovim zsh git curl python3 ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v pacman >/dev/null 2>&1; then
-        sudo pacman -Sy --noconfirm tmux vim zsh git curl python
+        sudo pacman -Syu --needed --noconfirm tmux vim neovim zsh git curl python ca-certificates tar xz unzip less diffutils fzf fd bat ripgrep eza lf
     else
         echo "Gestionnaire de paquets non reconnu."
-        echo "Installe manuellement : tmux vim zsh git curl python3"
+        echo "Installe manuellement : tmux vim neovim zsh git curl python3 ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf"
         exit 1
     fi
 }
 
 install_packages
+
+DOWNLOAD_DIR="$(mktemp -d)"
+trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
+mkdir -p "$HOME/.local/bin"
+if ! command -v starship >/dev/null 2>&1; then
+    log "Installation de Starship"
+    curl -fsSL https://starship.rs/install.sh -o "$DOWNLOAD_DIR/starship.sh"
+    sh "$DOWNLOAD_DIR/starship.sh" --yes --bin-dir "$HOME/.local/bin"
+fi
+if ! command -v leaf >/dev/null 2>&1; then
+    log "Installation de Leaf (RivoLink/leaf)"
+    curl -fsSL https://raw.githubusercontent.com/RivoLink/leaf/main/scripts/install.sh -o "$DOWNLOAD_DIR/leaf.sh"
+    sh "$DOWNLOAD_DIR/leaf.sh" "$HOME/.local/bin"
+fi
+
+for tool in eza rg fzf lf nvim starship leaf; do
+    command -v "$tool" >/dev/null || { log "Dépendance manquante : $tool"; exit 1; }
+done
+
+for target in .config/starship.toml .codex/config.toml; do
+    mkdir -p "$HOME/$(dirname "$target")"
+    backup_file "$HOME/$target"
+done
+install -m 0644 "$SCRIPT_DIR/starship.toml" "$HOME/.config/starship.toml"
+install -m 0600 "$SCRIPT_DIR/codex-config.toml" "$HOME/.codex/config.toml"
 
 log "Installation de ~/.tmux.conf"
 backup_file "${HOME}/.tmux.conf"
@@ -64,9 +91,18 @@ else
     log "Oh My Zsh est déjà installé, conservation de l'installation existante."
 fi
 
-log "Installation du thème Headline"
-backup_file "${HOME}/headline.zsh-theme"
-install -m 0644 "${SCRIPT_DIR}/headline.zsh-theme" "${HOME}/headline.zsh-theme"
+log "Installation des plugins Zsh"
+for plugin in zsh-vi-mode zsh-autosuggestions; do
+    case "$plugin" in
+        zsh-vi-mode) repo=jeffreytse/zsh-vi-mode ;;
+        zsh-autosuggestions) repo=zsh-users/zsh-autosuggestions ;;
+    esac
+    destination="$HOME/.oh-my-zsh/custom/plugins/$plugin"
+    if [ ! -d "$destination" ]; then
+        git clone --depth=1 "https://github.com/$repo.git" "$destination"
+    fi
+done
+# git et history-substring-search sont fournis par Oh My Zsh.
 
 log "Installation de ~/.zshrc"
 backup_file "${HOME}/.zshrc"
@@ -78,7 +114,7 @@ append_or_replace_block() {
 
     touch "$target"
 
-    python3 - "$target" "$snippet" <<'PY'
+    TMUX_SHARED_SESSION="$SESSION_NAME" python3 - "$target" "$snippet" <<'PY'
 from pathlib import Path
 import sys
 
@@ -90,6 +126,8 @@ end = "# <<< tmux-shared auto-attach <<<"
 
 text = target.read_text()
 snippet = snippet_file.read_text().strip()
+import os
+snippet = snippet.replace("${TMUX_SHARED_SESSION:-shared}", "${TMUX_SHARED_SESSION:-" + os.environ["TMUX_SHARED_SESSION"] + "}")
 
 if begin in text and end in text:
     before, rest = text.split(begin, 1)
@@ -104,6 +142,7 @@ PY
 
 # Garde le comportement pour Bash/sh.
 log "Configuration de l'auto-attach SSH dans ~/.profile"
+backup_file "${HOME}/.profile"
 append_or_replace_block "${HOME}/.profile" "${SCRIPT_DIR}/profile-snippet.sh"
 
 # Zsh interactif ne lit pas ~/.profile : on ajoute aussi le bloc à ~/.zshrc.
@@ -121,6 +160,7 @@ fi
 
 log "Installation du service systemd utilisateur"
 mkdir -p "${USER_SYSTEMD_DIR}"
+backup_file "$SERVICE_FILE"
 sed "s/Environment=TMUX_SHARED_SESSION=shared/Environment=TMUX_SHARED_SESSION=${SESSION_NAME}/" \
     "${SCRIPT_DIR}/tmux-shared.service" > "${SERVICE_FILE}"
 
@@ -151,7 +191,8 @@ Fichiers installés :
   ~/.tmux.conf
   ~/.vimrc
   ~/.zshrc
-  ~/headline.zsh-theme
+  ~/.config/starship.toml
+  ~/.codex/config.toml
   ~/.oh-my-zsh/
   ~/.config/systemd/user/tmux-shared.service
 
@@ -170,10 +211,9 @@ Bindings tmux supplémentaires :
   F4  : fenêtre suivante
   F10 : tuer la fenêtre courante avec confirmation
 
-NOTE :
-  Ton .zshrc active le plugin Oh My Zsh "thefuck".
-  Le plugin est chargé, mais la commande "thefuck" doit être installée
-  séparément sur les machines où tu souhaites l'utiliser.
+Starship et Leaf déjà présents sont conservés.
+Codex CLI et OpenCode : installation/authentification séparées.
+Sélectionne une Nerd Font dans ton terminal pour afficher les icônes.
 
 Déconnecte/reconnecte ta session SSH pour prendre en compte le shell
 par défaut et tomber directement dans la session tmux partagée.

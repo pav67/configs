@@ -1,287 +1,145 @@
-# tmux-shared-kit
+# Configurations du poste
 
-Kit de configuration personnel pour déployer rapidement un environnement shell homogène sur un serveur Linux.
-
-Il installe et configure :
-
-- `tmux`
-- `vim`
-- `zsh`
-- [Oh My Zsh](https://ohmyz.sh/)
-- un thème Zsh personnalisé (`headline.zsh-theme`)
-- une session tmux persistante créée automatiquement au boot
-- l'attachement automatique à cette session lors d'une connexion SSH interactive
-
-Le kit est conçu pour retrouver la même session de travail depuis plusieurs appareils : PC fixe, portable, téléphone, etc.
-
----
+Kit personnel pour retrouver Zsh, tmux, Starship et les préférences Codex sur un nouveau poste Linux. Le README sert de spécification du comportement et des raccourcis.
 
 ## Installation
 
+```bash
+git clone https://github.com/pav67/configs.git ~/configs
+cd ~/configs
+./install.sh
+```
+
+Exécuter avec l'utilisateur final, sans `sudo` devant le script. Il utilise `sudo` pour les paquets, le shell par défaut et le linger systemd. Il faut un accès Internet et une session utilisateur systemd active. La cible de référence est Debian 13 ; des branches d'installation sont également prévues pour Fedora et Arch (non validées sur un poste réel). Les anciennes distributions peuvent ne pas fournir tous les paquets ; leur installation échoue explicitement dans ce cas. Sur Arch, le script effectue une mise à jour complète avec `pacman -Syu`.
+
+Sélectionner une **Nerd Font dans le terminal client**, y compris pour les connexions SSH, pour afficher les icônes du prompt et de tmux.
+
+Pour mettre à jour :
 
 ```bash
-git clone https://github.com/pav67/configs.git ~/configs \
-  && cd ~/configs \
-  && chmod +x install.sh \
-  && ./install.sh
+cd ~/configs
+git pull
+./install.sh
 ```
 
-> Ne pas lancer `install.sh` avec `sudo`.
->
-> Le script doit être exécuté avec l'utilisateur qui utilisera Zsh et tmux.
-> Il demandera ponctuellement `sudo` pour installer les paquets, changer le shell par défaut et activer le `linger` systemd.
+Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`, notamment `.profile`, la configuration Codex et le service systemd. Les installations existantes de Starship, Leaf, Oh My Zsh et de ses plugins sont conservées. Les paquets suivent le gestionnaire de la distribution.
 
+## Dépendances et fichiers
 
----
+| Outil | Utilisation |
+|---|---|
+| Zsh, Oh My Zsh | Shell interactif ; plugins `git`, `zsh-vi-mode`, `zsh-autosuggestions`, `history-substring-search` |
+| tmux | Session persistante partagée et souris |
+| Starship | Prompt gris avec utilisateur, hôte, dossier, Git et durée |
+| `eza` | Alias `ls`, `ll`, `la`, `tree` |
+| `bat` (`batcat` sur Debian) | Alias `cat` et prévisualisation fzf |
+| `ripgrep` (`rg`) | Alias `grep` |
+| `fd-find` (`fdfind` ou `fd`) | Recherche de fichiers pour fzf |
+| `fzf` | Recherche interactive de fichiers, dossiers et historique |
+| `lf` | Gestionnaire de fichiers ; sa fonction shell conserve le dernier dossier |
+| `less`, Git | Alias `glog`, `gadog` et plugin Git |
+| `diffutils`, coreutils | Alias `diff --color=auto`, `df -h` et utilitaires système |
+| Vim, Neovim (`nvim`) | Éditeurs ; `EDITOR` et `VISUAL` pointent vers Neovim |
+| Leaf (`RivoLink/leaf`) | Lecture Markdown : `leaf README.md` |
+| curl, certificats CA, Python 3, tar, xz, unzip | Téléchargements et installation |
 
-## Ce qui est installé
+Starship et Leaf sont téléchargés via leurs installateurs officiels dans `~/.local/bin` lorsqu'ils sont absents. Neovim et les autres outils viennent des paquets système. Les plugins externes sont clonés depuis `jeffreytse/zsh-vi-mode` et `zsh-users/zsh-autosuggestions`. `git` et `history-substring-search` sont inclus dans Oh My Zsh.
 
-Les paquets suivants sont installés si nécessaire :
+| Source | Destination |
+|---|---|
+| `zshrc` | `~/.zshrc` |
+| `tmux.conf` | `~/.tmux.conf` |
+| `starship.toml` | `~/.config/starship.toml` |
+| `codex-config.toml` | `~/.codex/config.toml` (permissions 600) |
+| `vimrc` | `~/.vimrc` |
+| `profile-snippet.sh` | Bloc géré dans `~/.profile` et `~/.zshrc` |
+| `tmux-shared.service` | `~/.config/systemd/user/tmux-shared.service` |
 
-```text
-tmux
-vim
-zsh
-git
-curl
-python3
-```
+Neovim est installé sans configuration personnalisée ; `vimrc` reste réservé à Vim. L'ancien `headline.zsh-theme` reste archivé dans le dépôt mais n'est plus installé ni chargé. L'alias `dotfiles` suppose un dépôt bare personnel dans `~/.dotfiles` : le script ne le crée pas. Le chemin optionnel `~/.opencode/bin` est conservé ; OpenCode n'est pas installé par ce kit.
 
-Oh My Zsh est cloné dans :
+## Codex
 
-```text
-~/.oh-my-zsh
-```
+Le fichier reprend les préférences du poste : modèle `gpt-6-astra`, raisonnement `medium`, `approval_policy = "never"`, sandbox `workspace-write` et accès réseau activé. Les animations, le titre avec spinner et les notifications BEL sont activés. La disponibilité du modèle dépend du compte utilisé.
 
-Les fichiers de configuration sont installés dans :
+Le kit copie uniquement les préférences : aucun jeton, historique, session, cache, plugin ni autorisation de confiance liée aux projets du poste source. Il remplace le fichier de préférences existant après sauvegarde. Codex CLI doit être installé et authentifié séparément. Les paramètres de référence sont décrits dans la [documentation officielle OpenAI](https://developers.openai.com/codex/config-reference/).
 
-```text
-~/.tmux.conf
-~/.vimrc
-~/.zshrc
-~/headline.zsh-theme
-~/.config/systemd/user/tmux-shared.service
-```
+Dans tmux, les fenêtres Codex affichent le spinner du titre fourni par l'application. Une cloche marque les alertes des fenêtres inactives, sans son ; visiter la fenêtre acquitte l'alerte.
 
-Les anciens fichiers sont sauvegardés avant remplacement :
+## Session persistante et SSH
 
-```text
-~/.tmux.conf.bak.YYYYMMDD-HHMMSS
-~/.vimrc.bak.YYYYMMDD-HHMMSS
-~/.zshrc.bak.YYYYMMDD-HHMMSS
-~/headline.zsh-theme.bak.YYYYMMDD-HHMMSS
-```
-
----
-
-## Session tmux persistante
-
-Par défaut, le script crée une session :
-
-```text
-shared
-```
-
-Elle est lancée via un service `systemd --user`.
-
-Vérification :
+Le service `systemd --user` crée la session `shared`. Le linger permet son démarrage au boot. Les connexions SSH interactives s'y attachent automatiquement, sauf si elles sont déjà dans tmux. Les transferts SCP/SFTP et les commandes SSH non interactives ne déclenchent pas cet attachement. Plusieurs appareils peuvent partager la session.
 
 ```bash
 systemctl --user status tmux-shared.service
-```
-
-Lister les sessions tmux :
-
-```bash
 tmux ls
-```
-
-Attachement manuel :
-
-```bash
 tmux attach -t shared
 ```
 
----
-
-## Démarrage automatique au boot
-
-Le script active :
-
-```bash
-sudo loginctl enable-linger "$USER"
-```
-
-Cela permet au service systemd utilisateur de démarrer dès le boot, même si l'utilisateur ne s'est pas encore connecté en SSH.
-
-La session tmux `shared` est donc normalement déjà disponible lorsqu'une première connexion SSH arrive.
-
----
-
-## Attachement automatique en SSH
-
-Lors d'une connexion SSH interactive :
-
-```bash
-ssh user@serveur
-```
-
-le shell s'attache automatiquement à la session :
-
-```text
-shared
-```
-
-L'auto-attach n'est volontairement pas déclenché pour :
-
-```bash
-scp ...
-rsync ...
-sftp ...
-ssh serveur "commande"
-```
-
-Il n'est pas non plus déclenché si le shell se trouve déjà dans une session tmux.
-
-Plusieurs appareils peuvent être attachés simultanément à la même session.
-
----
-
-## Bindings tmux supplémentaires
-
-Les bindings tmux standards sont conservés.
-
-Les raccourcis suivants sont ajoutés sans préfixe :
-
-| Touche | Action |
-|---|---|
-| `F2` | Nouvelle fenêtre |
-| `F3` | Fenêtre précédente |
-| `F4` | Fenêtre suivante |
-| `F10` | Fermer la fenêtre courante avec confirmation |
-
-Les raccourcis standards restent disponibles, par exemple :
-
-```text
-Ctrl-b c    Nouvelle fenêtre
-Ctrl-b n    Fenêtre suivante
-Ctrl-b p    Fenêtre précédente
-Ctrl-b [    Mode scroll / copie
-Ctrl-b d    Détacher la session
-```
-
-La souris est activée dans tmux, ce qui permet notamment de remonter directement dans le scrollback avec la molette.
-
----
-
-## Historique tmux
-
-Chaque pane conserve jusqu'à :
-
-```text
-100000 lignes
-```
-
-Le scrollback peut être parcouru :
-
-- à la molette ;
-- avec `Ctrl-b [` ;
-- avec les touches de navigation du mode copie.
-
----
-
-## Zsh / Oh My Zsh
-
-Le script configure Zsh comme shell par défaut :
-
-```bash
-chsh -s "$(command -v zsh)"
-```
-
-Le `.zshrc` fourni utilise Oh My Zsh et le thème :
-
-```text
-~/headline.zsh-theme
-```
-
-Plugins configurés :
-
-```zsh
-plugins=(git thefuck)
-```
-
-### Plugin `thefuck`
-
-Le plugin Oh My Zsh est activé dans `.zshrc`, mais l'application `thefuck` elle-même n'est pas installée par ce kit.
-
-Si elle est souhaitée, elle doit être installée séparément selon la distribution utilisée.
-
----
-
-## Utiliser un autre nom de session tmux
-
-Le nom par défaut est :
-
-```text
-shared
-```
-
-Pour utiliser par exemple `main` :
+Pour choisir un autre nom, composé uniquement de lettres, chiffres, tirets et underscores :
 
 ```bash
 TMUX_SHARED_SESSION=main ./install.sh
 ```
 
-Le service systemd et la session persistante utiliseront alors ce nom.
-
----
-
-## Mise à jour sur un serveur
-
-Depuis le dépôt cloné :
-
-```bash
-cd ~/tmux-shared-kit
-git pull
-./install.sh
-```
-
-Les fichiers existants seront sauvegardés avant réinstallation.
-
----
-
-## Structure du dépôt
-
-```text
-.
-├── README.md
-├── install.sh
-├── tmux.conf
-├── vimrc
-├── zshrc
-├── headline.zsh-theme
-├── profile-snippet.sh
-└── tmux-shared.service
-```
-
----
-
-## Désactiver l'auto-attach tmux temporairement
-
-Après connexion, il est possible de détacher la session avec :
-
-```text
-Ctrl-b d
-```
-
-Pour ouvrir ponctuellement un shell sans tmux :
+Le nom est enregistré dans le service et les deux blocs d'auto-attachement. Pour ouvrir ponctuellement un shell sans attachement :
 
 ```bash
 ssh -t user@serveur 'TMUX=disabled zsh'
 ```
 
----
+## Raccourcis Zsh
 
-## Licence
+Les raccourcis personnalisés sont enregistrés après l'initialisation de `zsh-vi-mode` afin qu'il ne les écrase pas.
 
-Configuration personnelle, librement réutilisable et adaptable.
+| Touche | Action |
+|---|---|
+| `Échap` | Passer en mode normal vi |
+| `i` / `a` en mode normal | Insérer avant / après le curseur |
+| `h`, `j`, `k`, `l`, `w`, `b` en mode normal | Déplacements vi |
+| `Ctrl` + `→` / `←` | Mot suivant / précédent en mode insertion |
+| `↑` / `↓` | Chercher dans l'historique selon le texte saisi |
+| `Ctrl-R` | Recherche fzf dans l'historique |
+| `Ctrl-T` | Choisir un fichier, y compris caché, avec aperçu bat |
+| `Ctrl-F` | Choisir un fichier non caché avec aperçu bat |
+| `Alt-C` | Choisir un dossier avec fzf |
+| `Ctrl-\` | Activer / désactiver les autosuggestions |
+| `Tab` | Complétion avec menu, sans distinction de casse |
+
+L'historique partagé entre shells conserve jusqu'à 100 000 entrées dans `~/.cache/zsh/history`. La recherche fd respecte les exclusions Git par défaut, même avec l'option fichiers cachés.
+
+## Raccourcis tmux
+
+Les touches F2–F10 ci-dessous fonctionnent directement. Pour les autres, appuyer sur `Ctrl-b`, relâcher, puis sur la touche indiquée.
+
+| Touche | Action |
+|---|---|
+| `F2` | Nouvelle fenêtre |
+| `F3` / `F4` | Fenêtre précédente / suivante |
+| `F10` | Fermer la fenêtre avec confirmation |
+| `Ctrl-b c` | Nouvelle fenêtre |
+| `Ctrl-b n` / `p` | Fenêtre suivante / précédente |
+| `Ctrl-b 1`…`9` | Choisir une fenêtre |
+| `Ctrl-b %` / `"` | Diviser en panneaux côte à côte / superposés |
+| `Ctrl-b` puis flèche | Changer de panneau |
+| `Ctrl-b z` | Agrandir / restaurer le panneau |
+| `Ctrl-b [` | Mode copie et défilement, navigation vi |
+| Espace puis Entrée en mode copie | Commencer la sélection puis copier dans le tampon tmux |
+| `q` en mode copie | Quitter le mode copie |
+| `Ctrl-b ]` | Coller le tampon tmux |
+| `Ctrl-b d` | Détacher sans arrêter la session |
+| `Ctrl-b ?` | Afficher tous les raccourcis |
+
+La souris permet de sélectionner/redimensionner les panneaux et de parcourir l'historique (100 000 lignes par panneau). Fenêtres et panneaux sont numérotés à partir de 1. Les fenêtres sont renumérotées après fermeture. Le délai Escape reste à 100 ms pour les terminaux Windows.
+
+## Vérification locale
+
+```bash
+bash -n install.sh
+zsh -n zshrc
+shellcheck install.sh profile-snippet.sh
+python3 tests/check_install.py
+```
+
+Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Il ne remplace pas un essai complet sur une machine vierge.
+
+Les installateurs officiels sont documentés par [Starship](https://starship.rs/guide/) et [Leaf](https://github.com/RivoLink/leaf#install).
