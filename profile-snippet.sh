@@ -1,4 +1,5 @@
 # >>> tmux-shared auto-attach >>>
+# shellcheck shell=sh
 # Auto-attache uniquement les connexions SSH interactives.
 # Ne s'exécute pas :
 # - dans une session tmux existante
