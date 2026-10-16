@@ -98,18 +98,20 @@ Le prompt Starship tient sur une ligne, sans bulles ni utilisateur/hôte :
 
 Dossier bleu, branche mauve, état Git ambre et durée grise (à partir de 2 secondes). Le chevron est vert après succès, rouge après erreur ; en mode Vim il devient `❮`, ambre en normal, mauve en visuel et orange en remplacement. Les segments Git et durée disparaissent lorsqu'ils ne s'appliquent pas.
 
-L'identité `user@hôte` se trouve à gauche dans tmux. Le nom d'hôte court détermine la couleur :
+Deux bulles séparées se trouvent à gauche dans tmux : `user hôte`. La bulle utilisateur a un fond gris ; celle de l'hôte utilise un fond coloré avec un texte sombre. Le nom système court détermine la couleur, sans distinction de majuscules/minuscules :
 
 | Hôte | Couleur | Hex |
 |---|---|---|
-| `klcentral` | Bleu | `#89b4fa` |
-| `codexops` | Vert | `#a6e3a1` |
-| `ainode` | Mauve | `#cba6f7` |
-| `debian-containers` | Cyan | `#89dceb` |
+| `KL-central` (alias `klcentral`) | Bleu | `#89b4fa` |
+| `codexops`, `kl-codex-runner` | Vert | `#a6e3a1` |
+| `ai-node` (alias `ainode`) | Mauve | `#cba6f7` |
+| `Debian-containers` | Cyan | `#89dceb` |
 | `kl-ca` | Jaune | `#f9e2af` |
 | `infra-core` | Pêche | `#fab387` |
 | `kl-clients*` | Rose | `#f5c2e7` |
 | Autres | Gris bleuté | `#a6adc8` |
+
+Les noms ont été rapprochés des clients Omada le 16 octobre 2026. `KL-central`, `infra-core` et `kl-ca` sont annoncés comme noms d'hôtes ; `Debian-containers`, `ai-node` et `codexops` sont des libellés clients Omada. La correspondance entre `codexops` et le nom système local `kl-codex-runner` a été confirmée par l'adresse locale. Le nom système reste affiché dans la bulle. Aucun client `kl-clients*` n'était annoncé ; la règle demandée reste en place. Aucun appel Omada ni identifiant de connexion n'est nécessaire au thème.
 
 L'utilisateur est blanc doux, **rouge pour root** (`#f38ba8`). Le script utilise `ps` (paquet `procps` / `procps-ng`) pour lire l'utilisateur du groupe de processus au premier plan du panneau actif, plutôt que celui mémorisé au démarrage de tmux. Un processus exécuté avec sudo peut donc faire apparaître root temporairement. En l'absence de processus détectable, `?` est affiché.
 

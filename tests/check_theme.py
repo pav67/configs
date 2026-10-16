@@ -29,18 +29,22 @@ with tempfile.TemporaryDirectory(prefix="tmux-theme-") as temp:
         )
 
     colors = {
-        "klcentral": "#89b4fa", "codexops": "#a6e3a1",
+        "klcentral": "#89b4fa", "KL-central": "#89b4fa",
+        "codexops": "#a6e3a1", "kl-codex-runner": "#a6e3a1",
+        "ai-node": "#cba6f7", "Debian-containers": "#89dceb",
+        "KL-CLIENTS-test": "#f5c2e7",
         "ainode": "#cba6f7", "debian-containers": "#89dceb",
         "kl-ca": "#f9e2af", "infra-core": "#fab387",
         "kl-clients01": "#f5c2e7", "other": "#a6adc8",
     }
     for host, color in colors.items():
         output = render(host, "alice 100 100\nroot 200 100")
-        assert f"fg={color},bold]{host}" in output
-        assert " alice" in output and " root" not in output
-    assert "fg=#f38ba8,bg=default,bold] root" in render(
+        assert f"bg={color},bold]{host}" in output
+        assert output.count("") == output.count("") == 2
+        assert "]alice" in output and "]root" not in output
+    assert "fg=#f38ba8,bg=#313244,bold]root" in render(
         "codexops", "alice 100 200\nroot 200 200"
     )
-    assert " ?" in render("codexops", "")
+    assert "]?" in render("codexops", "")
     assert "#[bg=red]" not in render("bad#[bg=red]", "alice 100 100")
 print("OK: host palette, foreground user, root, missing pane, style escaping")

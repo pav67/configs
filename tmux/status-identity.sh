@@ -2,10 +2,13 @@
 # Identity of the local tmux host and the active pane's foreground user.
 # ps comes from procps (Debian) / procps-ng (Fedora, Arch).
 host=$(hostname -s 2>/dev/null || uname -n)
-case "$host" in
-    klcentral)         color='#89b4fa' ;; # blue
-    codexops)          color='#a6e3a1' ;; # green
-    ainode)            color='#cba6f7' ;; # mauve
+# Omada client names checked on 2026-10-16. Match without case sensitivity.
+# codexops is the Omada label for the local system kl-codex-runner.
+host_key=$(printf '%s' "${host%%.*}" | LC_ALL=C tr '[:upper:]' '[:lower:]')
+case "$host_key" in
+    kl-central|klcentral)         color='#89b4fa' ;; # blue
+    codexops|kl-codex-runner)          color='#a6e3a1' ;; # green
+    ai-node|ainode)            color='#cba6f7' ;; # mauve
     debian-containers) color='#89dceb' ;; # cyan
     kl-ca)             color='#f9e2af' ;; # yellow
     infra-core)        color='#fab387' ;; # peach
@@ -27,5 +30,6 @@ host=$(printf '%s' "$host" | tr -cd 'A-Za-z0-9_.-')
 user=$(printf '%s' "$user" | tr -cd 'A-Za-z0-9_.?@-')
 user_color='#cdd6f4'
 [ "$user" != root ] || user_color='#f38ba8'
-printf '#[fg=%s,bg=default,bold] %s#[fg=#6c7086,nobold]@#[fg=%s,bold]%s#[default]  ' \
-    "$user_color" "$user" "$color" "$host"
+# Separate rounded bubbles: neutral user background and colored host background.
+printf '#[fg=#313244,bg=default,nobold]#[fg=%s,bg=#313244,bold]%s#[fg=#313244,bg=default,nobold]#[default] #[fg=%s,bg=default]#[fg=#1e1e2e,bg=%s,bold]%s#[fg=%s,bg=default,nobold]#[default] ' \
+    "$user_color" "$user" "$color" "$color" "$host" "$color"
