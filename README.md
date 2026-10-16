@@ -30,7 +30,7 @@ Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`,
 |---|---|
 | Zsh, Oh My Zsh | Shell interactif ; plugins `git`, `zsh-vi-mode`, `zsh-autosuggestions`, `history-substring-search` |
 | tmux | Session persistante partagée et souris |
-| Starship | Prompt gris avec utilisateur, hôte, dossier, Git et durée |
+| Starship | Prompt épuré : dossier, Git, durée et indicateur du mode Vim |
 | `eza` | Alias `ls`, `ll`, `la`, `tree` |
 | `bat` (`batcat` sur Debian) | Alias `cat` et prévisualisation fzf |
 | `ripgrep` (`rg`) | Alias `grep` |
@@ -49,6 +49,7 @@ Starship et Leaf sont téléchargés via leurs installateurs officiels dans `~/.
 |---|---|
 | `zshrc` | `~/.zshrc` |
 | `tmux.conf` | `~/.tmux.conf` |
+| `tmux/status-identity.sh` | `~/.config/tmux/status-identity.sh` |
 | `starship.toml` | `~/.config/starship.toml` |
 | `codex-config.toml` | `~/.codex/config.toml` (permissions 600) |
 | `vimrc` | `~/.vimrc` |
@@ -86,6 +87,48 @@ Le nom est enregistré dans le service et les deux blocs d'auto-attachement. Pou
 ```bash
 ssh -t user@serveur 'TMUX=disabled zsh'
 ```
+
+## Thèmes et identité réseau
+
+Le prompt Starship tient sur une ligne, sans bulles ni utilisateur/hôte :
+
+```text
+…/work/configs on main !2 ?1 · 3s ❯
+```
+
+Dossier bleu, branche mauve, état Git ambre et durée grise (à partir de 2 secondes). Le chevron est vert après succès, rouge après erreur ; en mode Vim il devient `❮`, ambre en normal, mauve en visuel et orange en remplacement. Les segments Git et durée disparaissent lorsqu'ils ne s'appliquent pas.
+
+Deux bulles séparées se trouvent à gauche dans tmux : `user hôte`. La bulle utilisateur a un fond gris ; celle de l'hôte utilise un fond coloré avec un texte sombre. Le nom système court détermine la couleur, sans distinction de majuscules/minuscules :
+
+| Hôte | Couleur | Hex |
+|---|---|---|
+| `KL-central` (alias `klcentral`) | Bleu | `#89b4fa` |
+| `codexops`, `kl-codex-runner` | Vert | `#a6e3a1` |
+| `ai-node` (alias `ainode`) | Mauve | `#cba6f7` |
+| `Debian-containers` | Cyan | `#89dceb` |
+| `kl-ca` | Jaune | `#f9e2af` |
+| `infra-core` | Pêche | `#fab387` |
+| `kl-clients*` | Rose | `#f5c2e7` |
+| Autres | Gris bleuté | `#a6adc8` |
+
+Les noms ont été rapprochés des clients Omada le 16 octobre 2026. `KL-central`, `infra-core` et `kl-ca` sont annoncés comme noms d'hôtes ; `Debian-containers`, `ai-node` et `codexops` sont des libellés clients Omada. La correspondance entre `codexops` et le nom système local `kl-codex-runner` a été confirmée par l'adresse locale. Le nom système reste affiché dans la bulle. Aucun client `kl-clients*` n'était annoncé ; la règle demandée reste en place. Aucun appel Omada ni identifiant de connexion n'est nécessaire au thème.
+
+L'utilisateur est blanc doux, **rouge pour root** (`#f38ba8`). Le script utilise `ps` (paquet `procps` / `procps-ng`) pour lire l'utilisateur du groupe de processus au premier plan du panneau actif, plutôt que celui mémorisé au démarrage de tmux. Un processus exécuté avec sudo peut donc faire apparaître root temporairement. En l'absence de processus détectable, `?` est affiché.
+
+L'identité est locale au serveur tmux : un `ssh ainode` dans un panneau local ne transforme pas ce serveur en ainode. Pour afficher l'identité d'ainode, utiliser tmux sur ainode, avec ce kit installé. Hors tmux, le prompt ne contient pas d'identité, conformément au thème choisi.
+
+Pour appliquer uniquement le thème sans réinstaller les dépendances :
+
+```bash
+# Sauvegarder d'abord les fichiers existants si besoin.
+mkdir -p ~/.config/tmux
+install -m 0755 tmux/status-identity.sh ~/.config/tmux/status-identity.sh
+install -m 0644 tmux.conf ~/.tmux.conf
+install -m 0644 starship.toml ~/.config/starship.toml
+tmux source-file ~/.tmux.conf
+```
+
+Starship lit son fichier au prochain prompt. La palette tmux est modifiable dans `tmux/status-identity.sh`. Guide pratique : [le mode Vim dans Zsh](MODE-VIM-ZSH.md).
 
 ## Raccourcis Zsh
 
@@ -136,8 +179,9 @@ La souris permet de sélectionner/redimensionner les panneaux et de parcourir l'
 ```bash
 bash -n install.sh
 zsh -n zshrc
-shellcheck install.sh profile-snippet.sh
+shellcheck install.sh profile-snippet.sh tmux/status-identity.sh
 python3 tests/check_install.py
+python3 tests/check_theme.py
 ```
 
 Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Il ne remplace pas un essai complet sur une machine vierge.

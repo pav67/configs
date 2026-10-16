@@ -24,5 +24,7 @@ with tempfile.TemporaryDirectory(prefix='configs-test-') as tmp:
     assert 'Environment=TMUX_SHARED_SESSION=custom-test' in (home/'.config/systemd/user/tmux-shared.service').read_text()
     assert (home/'.codex/config.toml').stat().st_mode & 0o777 == 0o600
     assert any(p.read_text()=='# existing config\n' for p in (home/'.codex').glob('*.bak.*'))
+    assert (home/'.config/tmux/status-identity.sh').stat().st_mode & 0o777 == 0o755
+    assert (home/'.config/tmux/status-identity.sh').read_bytes() == (repo/'tmux/status-identity.sh').read_bytes()
     assert (home/'.config/starship.toml').read_bytes()==(repo/'starship.toml').read_bytes()
     print('OK: TOML, installation isolée répétée, sauvegardes, permissions, session personnalisée, blocs uniques')
