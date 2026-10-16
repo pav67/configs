@@ -1,41 +1,24 @@
+# Minimal pastel prompt: no backgrounds, bubbles or repeated identity.
 add_newline = false
+format = "$directory$git_branch$git_status$cmd_duration$character"
 
-format = "$username$hostname$directory$git_branch$git_status$cmd_duration$character"
-
-# Utilisateur — gris foncé
-[username]
-show_always = true
-style_user = "fg:#eeeeee bg:#303438"
-style_root = "bold fg:#ff8080 bg:#303438"
-format = "[](fg:#303438)[ $user]($style)[](fg:#303438) "
-
-# Serveur — gris légèrement plus clair
-[hostname]
-ssh_only = false
-trim_at = "."
-style = "fg:#eeeeee bg:#404448"
-format = "[](fg:#404448)[󰒋 $hostname]($style)[](fg:#404448) "
-
-# Dossier — gris moyen
 [directory]
-style = "fg:#ffffff bg:#505458"
-read_only_style = "fg:#ffaaaa bg:#505458"
-format = "[](fg:#505458)[ $path]($style)[$read_only]($read_only_style)[](fg:#505458) "
+style = "bold fg:#89b4fa"
+read_only_style = "fg:#f38ba8"
+format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 2
 truncation_symbol = "…/"
 truncate_to_repo = false
-read_only = " "
+read_only = " ro"
 
-# Branche Git — gris intermédiaire
 [git_branch]
-symbol = " "
-style = "fg:#ffffff bg:#606468"
-format = "[](fg:#606468)[$symbol$branch]($style)[](fg:#606468) "
+symbol = ""
+style = "fg:#cba6f7"
+format = "[on](fg:#6c7086) [$branch]($style) "
 
-# État Git — bulle masquée si aucun état à signaler
 [git_status]
-style = "fg:#ffffff bg:#707478"
-format = '([](fg:#707478)[$all_status$ahead_behind]($style)[](fg:#707478) )'
+style = "fg:#f9e2af"
+format = '([$all_status$ahead_behind]($style) )'
 conflicted = '=${count} '
 modified = '!${count} '
 untracked = '?${count} '
@@ -47,14 +30,15 @@ ahead = '⇡${count} '
 behind = '⇣${count} '
 diverged = '⇡${ahead_count}⇣${behind_count} '
 
-# Durée — gris clair, visible à partir de 2 secondes
 [cmd_duration]
 min_time = 2000
-style = "fg:#202428 bg:#a0a4a8"
-format = "[](fg:#a0a4a8)[󱎫 $duration]($style)[](fg:#a0a4a8) "
+style = "fg:#9399b2"
+format = "[· $duration]($style) "
 
-# Saisie — couleur selon le résultat et le mode Vim
 [character]
-success_symbol = "[❯](bold fg:#b8bcbf)"
-error_symbol = "[❯](bold fg:#ff7070)"
-vimcmd_symbol = "[❮](bold fg:#e5c07b)"
+success_symbol = "[❯](bold fg:#a6e3a1)"
+error_symbol = "[❯](bold fg:#f38ba8)"
+vimcmd_symbol = "[❮](bold fg:#f9e2af)"
+vimcmd_replace_one_symbol = "[❮](bold fg:#fab387)"
+vimcmd_replace_symbol = "[❮](bold fg:#fab387)"
+vimcmd_visual_symbol = "[❮](bold fg:#cba6f7)"

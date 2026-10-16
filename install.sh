@@ -32,16 +32,16 @@ install_packages() {
 
     if command -v apt-get >/dev/null 2>&1; then
         sudo apt-get update
-        sudo apt-get install -y tmux vim neovim zsh git curl python3 ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf
+        sudo apt-get install -y tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y tmux vim-enhanced neovim zsh git curl python3 ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
+        sudo dnf install -y tmux vim-enhanced neovim zsh git curl python3 procps-ng ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v yum >/dev/null 2>&1; then
-        sudo yum install -y tmux vim-enhanced neovim zsh git curl python3 ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
+        sudo yum install -y tmux vim-enhanced neovim zsh git curl python3 procps-ng ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v pacman >/dev/null 2>&1; then
-        sudo pacman -Syu --needed --noconfirm tmux vim neovim zsh git curl python ca-certificates tar xz unzip less diffutils fzf fd bat ripgrep eza lf
+        sudo pacman -Syu --needed --noconfirm tmux vim neovim zsh git curl python procps-ng ca-certificates tar xz unzip less diffutils fzf fd bat ripgrep eza lf
     else
         echo "Gestionnaire de paquets non reconnu."
-        echo "Installe manuellement : tmux vim neovim zsh git curl python3 ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf"
+        echo "Installe manuellement : tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf"
         exit 1
     fi
 }
@@ -72,6 +72,11 @@ for target in .config/starship.toml .codex/config.toml; do
 done
 install -m 0644 "$SCRIPT_DIR/starship.toml" "$HOME/.config/starship.toml"
 install -m 0600 "$SCRIPT_DIR/codex-config.toml" "$HOME/.codex/config.toml"
+
+log "Installation de l’identité tmux"
+mkdir -p "$HOME/.config/tmux"
+backup_file "$HOME/.config/tmux/status-identity.sh"
+install -m 0755 "$SCRIPT_DIR/tmux/status-identity.sh" "$HOME/.config/tmux/status-identity.sh"
 
 log "Installation de ~/.tmux.conf"
 backup_file "${HOME}/.tmux.conf"
@@ -189,6 +194,7 @@ Session tmux :
 
 Fichiers installés :
   ~/.tmux.conf
+  ~/.config/tmux/status-identity.sh
   ~/.vimrc
   ~/.zshrc
   ~/.config/starship.toml
