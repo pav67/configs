@@ -19,7 +19,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
         bin_dir.mkdir()
         log = root / 'commands'
         commands = {name: 'exit 0' for name in [
-            'sudo', 'systemctl', 'loginctl', 'tmux', 'leaf', 'starship',
+            'apt-get', 'sudo', 'systemctl', 'loginctl', 'tmux', 'leaf', 'starship',
             'eza', 'rg', 'fzf', 'lf', 'nvim', 'chsh',
         ]}
         commands.update({
@@ -43,7 +43,8 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
         (home / '.codex').mkdir()
         (home / '.codex/config.toml').write_text('# existing config\n')
         for _ in range(2):
-            subprocess.run(['bash', str(repo / 'install.sh')], env=env, check=True, stdout=subprocess.DEVNULL)
+            result = subprocess.run(['bash', str(repo / 'install.sh')], env=env, capture_output=True, text=True)
+            assert result.returncode == 0, result.stdout + result.stderr
         for name in ['.profile', '.zshrc']:
             data = (home / name).read_text()
             assert data.count('# >>> tmux-shared auto-attach >>>') == 1

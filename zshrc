@@ -8,7 +8,7 @@ if [[ "$OSTYPE" == darwin* ]]; then
     eval "$(/usr/local/bin/brew shellenv)"
   fi
 fi
-export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 export EDITOR=nvim
 export VISUAL=nvim
 

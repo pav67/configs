@@ -227,6 +227,7 @@ shellcheck install.sh profile-snippet.sh tmux/status-identity.sh
 python3 tests/check_install.py
 python3 tests/check_theme.py
 python3 tests/check_native_identity.py
+python3 tests/check_auto_attach.py
 ```
 
 Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau Linux/macOS dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Le test natif vérifie également la détection du premier plan avec le vrai `ps` dans un pseudo-terminal. Ces contrôles sont exécutés par GitHub Actions sur Linux et macOS ; ils ne remplacent pas un essai complet du LaunchAgent dans une session graphique réelle.
