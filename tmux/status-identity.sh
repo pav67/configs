@@ -21,8 +21,18 @@ esac
 pane_tty=${1#/dev/}
 user='?'
 if [ -n "$pane_tty" ]; then
-    foreground_user=$(ps -t "$pane_tty" -o user:64=,pgid=,tpgid= --sort=pid 2>/dev/null |
-        awk '$2 == $3 && $3 > 0 { user = $1 } END { print user }')
+    if [ "$(uname -s)" = Darwin ]; then
+        # BSD ps marks the foreground group with +; it has no GNU --sort.
+        foreground_uid=$(ps -t "$pane_tty" -o uid=,pid=,stat= 2>/dev/null |
+            awk '$3 ~ /\+/ && $2 > newest { newest = $2; uid = $1 } END { print uid }')
+        foreground_user=''
+        if [ -n "$foreground_uid" ]; then
+            foreground_user=$(id -nu "$foreground_uid" 2>/dev/null || true)
+        fi
+    else
+        foreground_user=$(ps -t "$pane_tty" -o user:64=,pgid=,tpgid= --sort=pid 2>/dev/null |
+            awk '$2 == $3 && $3 > 0 { user = $1 } END { print user }')
+    fi
     [ -z "$foreground_user" ] || user=$foreground_user
 fi
 # Keep host/user text from injecting tmux styles, including unusual hostnames.

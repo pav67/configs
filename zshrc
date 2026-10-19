@@ -1,3 +1,13 @@
+# Homebrew paths for interactive shells, including non-login tmux shells.
+if [[ "$OSTYPE" == darwin* ]]; then
+  if (( $+commands[brew] )); then
+    eval "$(brew shellenv)"
+  elif [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+fi
 export PATH="$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 export EDITOR=nvim
 export VISUAL=nvim
@@ -16,16 +26,27 @@ plugins=(
 source "$ZSH/oh-my-zsh.sh"
 
 # >>> tmux-shared auto-attach >>>
-if [ -n "${SSH_TTY:-}" ] \
+# shellcheck shell=sh
+# Auto-attache SSH ; sur macOS, attache aussi les terminaux locaux interactifs.
+# TMUX_AUTO_ATTACH=0 permet de désactiver ce comportement.
+# Ne s'exécute pas :
+# - dans une session tmux existante
+# - pour scp / rsync / sftp
+# - pour "ssh serveur commande"
+case $- in
+*i*)
+if [ "${TMUX_AUTO_ATTACH:-1}" != 0 ] \
+   && { [ -n "${SSH_TTY:-}" ] || [ "$(uname -s)" = Darwin ]; } \
    && [ -z "${TMUX:-}" ] \
    && [ -t 0 ] \
    && [ -t 1 ] \
    && command -v tmux >/dev/null 2>&1
 then
     TMUX_SHARED_SESSION="${TMUX_SHARED_SESSION:-shared}"
-    tmux attach-session -t "$TMUX_SHARED_SESSION" 2>/dev/null \
-        || tmux new-session -s "$TMUX_SHARED_SESSION"
+    tmux new-session -A -s "$TMUX_SHARED_SESSION"
 fi
+;;
+esac
 # <<< tmux-shared auto-attach <<<
 
 mkdir -p "$HOME/.cache/zsh"
@@ -50,7 +71,7 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Package paths differ between Debian, Fedora and Arch.
 _source_fzf() {
   local script=$1 dir
-  for dir in /usr/share/doc/fzf/examples /usr/share/fzf /usr/share/fzf/shell; do
+  for dir in "${HOMEBREW_PREFIX:-/nonexistent}/opt/fzf/shell" /usr/share/doc/fzf/examples /usr/share/fzf /usr/share/fzf/shell; do
     if [[ -f "$dir/$script.zsh" ]]; then
       source "$dir/$script.zsh"
       return
@@ -120,7 +141,11 @@ alias tree='eza --tree --icons'
 compdef eza=ls
 
 alias grep='rg --color=auto'
-alias diff='diff --color=auto'
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias diff='gdiff --color=auto'
+else
+  alias diff='diff --color=auto'
+fi
 alias df='df -h'
 
 alias -- -='cd -'  # -- prevents - being parsed as a flag; cd - jumps to previous directory

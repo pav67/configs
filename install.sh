@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+OS="$(uname -s)"
 SESSION_NAME="${TMUX_SHARED_SESSION:-shared}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
@@ -30,7 +31,23 @@ fi
 install_packages() {
     log "Installation des dépendances : tmux, vim, neovim, zsh et outils shell..."
 
-    if command -v apt-get >/dev/null 2>&1; then
+    if [ "$OS" = Darwin ]; then
+        # Both standard prefixes; an existing custom brew in PATH takes priority.
+        if ! command -v brew >/dev/null 2>&1; then
+            for prefix in /opt/homebrew /usr/local; do
+                if [ -x "$prefix/bin/brew" ]; then
+                    eval "$("$prefix/bin/brew" shellenv)"
+                    break
+                fi
+            done
+        fi
+        if ! command -v brew >/dev/null 2>&1; then
+            log "Homebrew requis : installe-le depuis https://brew.sh puis relance ./install.sh"
+            exit 1
+        fi
+        eval "$(brew shellenv)"
+        brew install tmux vim neovim zsh git curl python fzf fd bat ripgrep eza lf diffutils starship leaf-markdown-viewer
+    elif command -v apt-get >/dev/null 2>&1; then
         sudo apt-get update
         sudo apt-get install -y tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf
     elif command -v dnf >/dev/null 2>&1; then
@@ -156,31 +173,75 @@ append_or_replace_block "${HOME}/.zshrc" "${SCRIPT_DIR}/profile-snippet.sh"
 
 log "Passage de Zsh comme shell par défaut"
 ZSH_BIN="$(command -v zsh)"
-CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7 || true)"
-if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
-    sudo chsh -s "$ZSH_BIN" "$USER"
+if [ "$OS" = Darwin ]; then
+    # /bin/zsh is already in /etc/shells; no system allowlist changes required.
+    ZSH_BIN=/bin/zsh
+    CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')"
+    if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
+        chsh -s "$ZSH_BIN"
+    fi
+
+    log "Installation du LaunchAgent tmux (ouverture de session macOS)"
+    SERVICE_FILE="$HOME/Library/LaunchAgents/net.pav67.tmux-shared.plist"
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+    backup_file "$SERVICE_FILE"
+    backup_file "$HOME/.config/tmux/start-shared.sh"
+    install -m 0755 "$SCRIPT_DIR/tmux/start-shared.sh" "$HOME/.config/tmux/start-shared.sh"
+    python3 - "$SERVICE_FILE" "$(command -v tmux)" "$SESSION_NAME" "$PATH" <<'PLIST'
+import plistlib, sys
+from pathlib import Path
+home = Path.home()
+config = {
+    "Label": "net.pav67.tmux-shared",
+    "ProgramArguments": ["/bin/sh", str(home / ".config/tmux/start-shared.sh"), sys.argv[2], sys.argv[3]],
+    "EnvironmentVariables": {"PATH": sys.argv[4], "HOME": str(home), "SHELL": "/bin/zsh"},
+    "WorkingDirectory": str(home),
+    "RunAtLoad": True,
+    # tmux forks its server. Let it survive the short-lived launcher.
+    "AbandonProcessGroup": True,
+    "StandardOutPath": str(home / "Library/Logs/tmux-shared.log"),
+    "StandardErrorPath": str(home / "Library/Logs/tmux-shared.log"),
+}
+with open(sys.argv[1], "wb") as target:
+    plistlib.dump(config, target)
+PLIST
+    DOMAIN="gui/$(id -u)"
+    if launchctl print "$DOMAIN" >/dev/null 2>&1; then
+        if launchctl print "$DOMAIN/net.pav67.tmux-shared" >/dev/null 2>&1; then
+            launchctl bootout "$DOMAIN/net.pav67.tmux-shared"
+        fi
+        launchctl bootstrap "$DOMAIN" "$SERVICE_FILE"
+    else
+        log "Pas de session graphique : LaunchAgent activé à la prochaine connexion graphique."
+    fi
+    SERVICE_STATUS="launchctl print $DOMAIN/net.pav67.tmux-shared"
 else
-    log "Zsh est déjà le shell par défaut."
-fi
+    CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7 || true)"
+    if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
+        sudo chsh -s "$ZSH_BIN" "$USER"
+    fi
+    log "Installation du service systemd utilisateur"
+    mkdir -p "${USER_SYSTEMD_DIR}"
+    backup_file "$SERVICE_FILE"
+    sed "s/Environment=TMUX_SHARED_SESSION=shared/Environment=TMUX_SHARED_SESSION=${SESSION_NAME}/" \
+        "${SCRIPT_DIR}/tmux-shared.service" > "${SERVICE_FILE}"
 
-log "Installation du service systemd utilisateur"
-mkdir -p "${USER_SYSTEMD_DIR}"
-backup_file "$SERVICE_FILE"
-sed "s/Environment=TMUX_SHARED_SESSION=shared/Environment=TMUX_SHARED_SESSION=${SESSION_NAME}/" \
-    "${SCRIPT_DIR}/tmux-shared.service" > "${SERVICE_FILE}"
+    systemctl --user daemon-reload
+    systemctl --user enable --now tmux-shared.service
 
-systemctl --user daemon-reload
-systemctl --user enable --now tmux-shared.service
+    log "Activation du démarrage du service utilisateur dès le boot (linger)"
+    if command -v loginctl >/dev/null 2>&1; then
+        sudo loginctl enable-linger "$USER"
+    else
+        log "loginctl absent : le service utilisateur démarrera au login, pas forcément au boot."
+    fi
 
-log "Activation du démarrage du service utilisateur dès le boot (linger)"
-if command -v loginctl >/dev/null 2>&1; then
-    sudo loginctl enable-linger "$USER"
-else
-    log "loginctl absent : le service utilisateur démarrera au login, pas forcément au boot."
+    SERVICE_STATUS="systemctl --user status tmux-shared.service"
 fi
 
 log "Vérification de la session tmux"
-tmux has-session -t "${SESSION_NAME}" 2>/dev/null || tmux new-session -d -s "${SESSION_NAME}"
+tmux has-session -t "=${SESSION_NAME}" 2>/dev/null || \
+    tmux new-session -d -s "${SESSION_NAME}" || tmux has-session -t "=${SESSION_NAME}"
 
 cat <<EOF
 
@@ -200,7 +261,7 @@ Fichiers installés :
   ~/.config/starship.toml
   ~/.codex/config.toml
   ~/.oh-my-zsh/
-  ~/.config/systemd/user/tmux-shared.service
+  ${SERVICE_FILE}
 
 Sauvegardes éventuelles :
   *.bak.${BACKUP_TS}
@@ -208,7 +269,7 @@ Sauvegardes éventuelles :
 Commandes utiles :
   tmux attach -t ${SESSION_NAME}
   tmux ls
-  systemctl --user status tmux-shared.service
+  ${SERVICE_STATUS}
   exec zsh
 
 Bindings tmux supplémentaires :

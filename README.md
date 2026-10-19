@@ -1,6 +1,6 @@
 # Configurations du poste
 
-Kit personnel pour retrouver Zsh, tmux, Starship et les préférences Codex sur un nouveau poste Linux. Le README sert de spécification du comportement et des raccourcis.
+Kit personnel pour retrouver Zsh, tmux, Starship et les préférences Codex sur un nouveau poste Linux ou macOS. Le README sert de spécification du comportement et des raccourcis.
 
 ## Installation
 
@@ -10,7 +10,7 @@ cd ~/configs
 ./install.sh
 ```
 
-Exécuter avec l'utilisateur final, sans `sudo` devant le script. Il utilise `sudo` pour les paquets, le shell par défaut et le linger systemd. Il faut un accès Internet et une session utilisateur systemd active. La cible de référence est Debian 13 ; des branches d'installation sont également prévues pour Fedora et Arch (non validées sur un poste réel). Les anciennes distributions peuvent ne pas fournir tous les paquets ; leur installation échoue explicitement dans ce cas. Sur Arch, le script effectue une mise à jour complète avec `pacman -Syu`.
+Exécuter avec l'utilisateur final, sans `sudo` devant le script. Il utilise `sudo` pour les paquets, le shell par défaut et le linger systemd. Il faut un accès Internet ; sur Linux, une session utilisateur systemd active est nécessaire. Sur macOS, voir le parcours ci-dessous. La cible de référence est Debian 13 ; des branches d'installation sont également prévues pour Fedora et Arch (non validées sur un poste réel). Les anciennes distributions peuvent ne pas fournir tous les paquets ; leur installation échoue explicitement dans ce cas. Sur Arch, le script effectue une mise à jour complète avec `pacman -Syu`.
 
 Sélectionner une **Nerd Font dans le terminal client**, y compris pour les connexions SSH, pour afficher les icônes du prompt et de tmux.
 
@@ -23,6 +23,48 @@ git pull
 ```
 
 Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`, notamment `.profile`, la configuration Codex et le service systemd. Les installations existantes de Starship, Leaf, Oh My Zsh et de ses plugins sont conservées. Les paquets suivent le gestionnaire de la distribution.
+
+## Installation sur MacBook
+
+Le même kit gère les chemins Homebrew Apple Silicon (`/opt/homebrew`) et Intel (`/usr/local`). Il faut une version de macOS prise en charge par Homebrew ; la disponibilité de certains paquets sur Intel dépend de Homebrew.
+
+1. Installer les outils de développement si Git n'est pas disponible : `xcode-select --install`, puis terminer la boîte de dialogue macOS.
+2. Installer [Homebrew](https://brew.sh/) s'il est absent et suivre les instructions affichées. Le kit détecte une installation existante mais ne déclenche pas son installation silencieusement.
+3. Cloner le dépôt puis exécuter le même `./install.sh`, sans sudo :
+
+```bash
+git clone https://github.com/pav67/configs.git ~/configs
+cd ~/configs
+./install.sh
+```
+
+Les paquets sont installés par Homebrew, notamment Starship et `leaf-markdown-viewer` (commande `leaf`). Le shell de connexion reste `/bin/zsh`, déjà autorisé par macOS. Homebrew est chargé dans `.zshrc`, y compris pour les shells non-login ouverts par tmux. L'alias `diff` utilise `gdiff` de GNU diffutils ; `fd`, `bat` et les scripts fzf utilisent leurs emplacements Homebrew.
+
+### Session partagée sur macOS
+
+Un LaunchAgent `~/Library/LaunchAgents/net.pav67.tmux-shared.plist` crée la session à l'ouverture de session macOS. Il remplace systemd/linger et ne nécessite pas de service root. Le script `~/.config/tmux/start-shared.sh` conserve une session existante. Sans session graphique pendant l'installation (par exemple via SSH), le LaunchAgent attend la prochaine ouverture de session graphique ; la session tmux est néanmoins créée immédiatement.
+
+Les terminaux locaux interactifs et les connexions SSH s'attachent automatiquement à `shared`. Linux conserve l'attachement automatique en SSH uniquement. Pour ouvrir un shell sans attachement :
+
+```bash
+TMUX_AUTO_ATTACH=0 zsh
+```
+
+Fermer un terminal ou détacher tmux laisse les programmes tourner tant que le serveur tmux reste actif. Une déconnexion complète du compte ou un redémarrage ne garantit pas leur survie : le LaunchAgent recrée une session vide, il ne restaure pas les processus. Le Mac n'est pas maintenu éveillé par le kit.
+
+```bash
+launchctl print "gui/$(id -u)/net.pav67.tmux-shared"
+tmux ls
+cat ~/Library/Logs/tmux-shared.log
+```
+
+### Affichage et clavier Mac
+
+Sélectionner une Nerd Font dans le profil du terminal. Par exemple, `brew install --cask font-meslo-lg-nerd-font`, puis sélectionner **MesloLGS Nerd Font** dans les réglages du terminal. Les deux bulles tmux restent identiques ; un MacBook non listé dans la palette utilise le gris bleuté de repli.
+
+Les touches tmux `F2/F3/F4/F10` nécessitent parfois `Fn`/🌐 ou le réglage macOS « Utiliser les touches F1, F2, etc. comme des touches de fonction standard ». Les équivalents `Ctrl-b c/p/n` restent disponibles. Activer « Utiliser Option comme touche Meta » dans Terminal pour `Alt-C` (Option-C). Les raccourcis Mission Control peuvent intercepter `Ctrl-←/→` : les mouvements Vim `Échap`, puis `b/w` évitent ce conflit.
+
+Voir les [conditions Homebrew](https://docs.brew.sh/Installation), la [formule Leaf](https://formulae.brew.sh/formula/leaf-markdown-viewer) et la documentation Apple sur les [LaunchAgents](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html).
 
 ## Dépendances et fichiers
 
@@ -43,7 +85,7 @@ Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`,
 | Leaf (`RivoLink/leaf`) | Lecture Markdown : `leaf README.md` |
 | curl, certificats CA, Python 3, tar, xz, unzip | Téléchargements et installation |
 
-Starship et Leaf sont téléchargés via leurs installateurs officiels dans `~/.local/bin` lorsqu'ils sont absents. Neovim et les autres outils viennent des paquets système. Les plugins externes sont clonés depuis `jeffreytse/zsh-vi-mode` et `zsh-users/zsh-autosuggestions`. `git` et `history-substring-search` sont inclus dans Oh My Zsh.
+Sur Linux, Starship et Leaf sont téléchargés via leurs installateurs officiels dans `~/.local/bin` lorsqu'ils sont absents. Neovim et les autres outils viennent des paquets système. Sur macOS, tous ces outils viennent de Homebrew. Les plugins externes sont clonés depuis `jeffreytse/zsh-vi-mode` et `zsh-users/zsh-autosuggestions`. `git` et `history-substring-search` sont inclus dans Oh My Zsh.
 
 | Source | Destination |
 |---|---|
@@ -54,7 +96,9 @@ Starship et Leaf sont téléchargés via leurs installateurs officiels dans `~/.
 | `codex-config.toml` | `~/.codex/config.toml` (permissions 600) |
 | `vimrc` | `~/.vimrc` |
 | `profile-snippet.sh` | Bloc géré dans `~/.profile` et `~/.zshrc` |
-| `tmux-shared.service` | `~/.config/systemd/user/tmux-shared.service` |
+| `tmux-shared.service` (Linux) | `~/.config/systemd/user/tmux-shared.service` |
+| LaunchAgent généré (macOS) | `~/Library/LaunchAgents/net.pav67.tmux-shared.plist` |
+| `tmux/start-shared.sh` (macOS) | `~/.config/tmux/start-shared.sh` |
 
 Neovim est installé sans configuration personnalisée ; `vimrc` reste réservé à Vim. L'ancien `headline.zsh-theme` reste archivé dans le dépôt mais n'est plus installé ni chargé. L'alias `dotfiles` suppose un dépôt bare personnel dans `~/.dotfiles` : le script ne le crée pas. Le chemin optionnel `~/.opencode/bin` est conservé ; OpenCode n'est pas installé par ce kit.
 
@@ -68,7 +112,7 @@ Dans tmux, les fenêtres Codex affichent le spinner du titre fourni par l'applic
 
 ## Session persistante et SSH
 
-Le service `systemd --user` crée la session `shared`. Le linger permet son démarrage au boot. Les connexions SSH interactives s'y attachent automatiquement, sauf si elles sont déjà dans tmux. Les transferts SCP/SFTP et les commandes SSH non interactives ne déclenchent pas cet attachement. Plusieurs appareils peuvent partager la session.
+Sur Linux, le service `systemd --user` crée la session `shared`. Le linger permet son démarrage au boot. Les connexions SSH interactives s'y attachent automatiquement, sauf si elles sont déjà dans tmux. Les transferts SCP/SFTP et les commandes SSH non interactives ne déclenchent pas cet attachement. Plusieurs appareils peuvent partager la session.
 
 ```bash
 systemctl --user status tmux-shared.service
@@ -113,7 +157,7 @@ Deux bulles séparées se trouvent à gauche dans tmux : `user hôte
 
 Les noms ont été rapprochés des clients Omada le 16 octobre 2026. `KL-central`, `infra-core` et `kl-ca` sont annoncés comme noms d'hôtes ; `Debian-containers`, `ai-node` et `codexops` sont des libellés clients Omada. La correspondance entre `codexops` et le nom système local `kl-codex-runner` a été confirmée par l'adresse locale. Le nom système reste affiché dans la bulle. Aucun client `kl-clients*` n'était annoncé ; la règle demandée reste en place. Aucun appel Omada ni identifiant de connexion n'est nécessaire au thème.
 
-L'utilisateur est blanc doux, **rouge pour root** (`#f38ba8`). Le script utilise `ps` (paquet `procps` / `procps-ng`) pour lire l'utilisateur du groupe de processus au premier plan du panneau actif, plutôt que celui mémorisé au démarrage de tmux. Un processus exécuté avec sudo peut donc faire apparaître root temporairement. En l'absence de processus détectable, `?` est affiché.
+L'utilisateur est blanc doux, **rouge pour root** (`#f38ba8`). Le script utilise `ps` (natif sur macOS ; paquet `procps` / `procps-ng` sur Linux) pour lire l'utilisateur du groupe de processus au premier plan du panneau actif, plutôt que celui mémorisé au démarrage de tmux. Un processus exécuté avec sudo peut donc faire apparaître root temporairement. En l'absence de processus détectable, `?` est affiché.
 
 L'identité est locale au serveur tmux : un `ssh ainode` dans un panneau local ne transforme pas ce serveur en ainode. Pour afficher l'identité d'ainode, utiliser tmux sur ainode, avec ce kit installé. Hors tmux, le prompt ne contient pas d'identité, conformément au thème choisi.
 
@@ -182,8 +226,9 @@ zsh -n zshrc
 shellcheck install.sh profile-snippet.sh tmux/status-identity.sh
 python3 tests/check_install.py
 python3 tests/check_theme.py
+python3 tests/check_native_identity.py
 ```
 
-Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Il ne remplace pas un essai complet sur une machine vierge.
+Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau Linux/macOS dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Le test natif vérifie également la détection du premier plan avec le vrai `ps` dans un pseudo-terminal. Ces contrôles sont exécutés par GitHub Actions sur Linux et macOS ; ils ne remplacent pas un essai complet du LaunchAgent dans une session graphique réelle.
 
 Les installateurs officiels sont documentés par [Starship](https://starship.rs/guide/) et [Leaf](https://github.com/RivoLink/leaf#install).
