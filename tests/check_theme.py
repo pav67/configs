@@ -8,6 +8,8 @@ repo = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix="tmux-theme-") as temp:
     bin_dir = Path(temp)
     commands = {
+        "uname": '#!/bin/sh\nprintf "%s\n" "$TEST_OS"\n',
+        "id": '#!/bin/sh\ncase "$2" in 501) echo alice;; 0) echo root;; *) exit 1;; esac\n',
         "hostname": '#!/bin/sh\nprintf "%s\\n" "$TEST_HOST"\n',
         "ps": '#!/bin/sh\nprintf "%s\\n" "$TEST_PROCESSES"\n',
     }
@@ -16,11 +18,12 @@ with tempfile.TemporaryDirectory(prefix="tmux-theme-") as temp:
         path.write_text(content)
         path.chmod(0o755)
 
-    def render(host, processes):
+    def render(host, processes, platform="Linux"):
         env = {
             **os.environ,
             "PATH": str(bin_dir) + ":" + os.environ["PATH"],
             "TEST_HOST": host,
+            "TEST_OS": platform,
             "TEST_PROCESSES": processes,
         }
         return subprocess.check_output(
@@ -47,4 +50,8 @@ with tempfile.TemporaryDirectory(prefix="tmux-theme-") as temp:
     )
     assert "]?" in render("codexops", "")
     assert "#[bg=red]" not in render("bad#[bg=red]", "alice 100 100")
+    # BSD ps exposes foreground membership with +, without GNU sorting.
+    assert "]alice" in render("MacBook", "501 400 S+\n0 900 S\n501 200 S+", "Darwin")
+    assert "fg=#f38ba8,bg=#313244,bold]root" in render("MacBook", "501 200 S\n0 400 S+", "Darwin")
+    assert "]?" in render("MacBook", "501 200 S", "Darwin")
 print("OK: host palette, foreground user, root, missing pane, style escaping")
