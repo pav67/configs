@@ -20,7 +20,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
         log = root / 'commands'
         commands = {name: 'exit 0' for name in [
             'apt-get', 'sudo', 'systemctl', 'loginctl', 'tmux', 'leaf', 'starship',
-            'eza', 'rg', 'fzf', 'lf', 'nvim', 'chsh',
+            'eza', 'rg', 'fzf', 'lf', 'nvim', 'vim', 'chsh',
         ]}
         commands['sudo'] = '[ "${TEST_FAIL:-}" != "$*" ] || { echo PACKAGE_FAILED >&2; exit 42; }'
         commands.update({
@@ -44,7 +44,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
         (home / '.codex').mkdir()
         (home / '.codex/config.toml').write_text('# existing config\n')
         for _ in range(2):
-            result = subprocess.run(['bash', str(repo / 'install.sh')], env=env, capture_output=True, text=True)
+            result = subprocess.run(['bash', str(repo / 'install.sh'), '--all'], env=env, capture_output=True, text=True)
             assert result.returncode == 0, result.stdout + result.stderr
         assert 'CLONE_DETAIL' not in result.stdout + result.stderr
         assert 'Journal complet :' in result.stdout
@@ -75,17 +75,38 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
             assert config['EnvironmentVariables']['HOME'] == str(home)
             assert config['EnvironmentVariables']['SHELL'] == '/bin/zsh'
             assert not config.get('KeepAlive')
-            assert 'brew install tmux' in calls and 'leaf-markdown-viewer' in calls
+            assert 'brew install python zsh git' in calls and 'leaf-markdown-viewer' in calls
             assert 'systemctl ' not in calls and 'loginctl ' not in calls and 'getent ' not in calls
             assert ('launchctl bootstrap gui/1000' in calls) == gui
             assert ('launchctl bootout gui/1000/net.pav67.tmux-shared' in calls) == gui
         if platform == 'Linux':
-            failed = subprocess.run(['bash', str(repo / 'install.sh')],
+            failed = subprocess.run(['bash', str(repo / 'install.sh'), '--all'],
                                     env={**env, 'TEST_FAIL': '-n apt-get update'},
                                     capture_output=True, text=True)
             assert failed.returncode == 42, failed.stdout + failed.stderr
-            assert 'Installation des dépendances' in failed.stderr
+            assert 'Installation des dependances' in failed.stderr
             assert 'PACKAGE_FAILED' not in failed.stdout + failed.stderr
             assert 'Installation terminée' not in failed.stdout
             assert 'Configuration de Starship et Codex' not in failed.stdout
+        # Independently selected components must not rewrite unrelated files.
+        for choice in ['codex', 'zsh', 'session', 'starship', 'neovim', 'vim', 'tools', 'leaf']:
+            partial = root / ('partial-' + choice)
+            partial.mkdir()
+            (partial / '.zshrc').write_text('# KEEP MY SHELL\n')
+            log.write_text('')
+            result = subprocess.run(['bash', str(repo / 'install.sh'), '--components', choice],
+                                    env={**env, 'HOME': str(partial), 'XDG_STATE_HOME': str(partial / '.state')},
+                                    capture_output=True, text=True)
+            assert result.returncode == 0, (choice, result.stdout, result.stderr)
+            assert (partial / '.codex/config.toml').exists() == (choice == 'codex')
+            assert (partial / '.config/starship.toml').exists() == (choice == 'starship')
+            assert (partial / '.tmux.conf').exists() == (choice == 'session')
+            assert (partial / '.vimrc').exists() == (choice == 'vim')
+            assert (partial / '.profile').exists() == (choice == 'session')
+            if choice not in ['zsh', 'session']:
+                assert (partial / '.zshrc').read_text() == '# KEEP MY SHELL\n'
+            if choice == 'zsh':
+                assert 'tmux-shared auto-attach' not in (partial / '.zshrc').read_text()
+                assert 'starship.toml' not in result.stdout
+            assert 'chsh ' not in log.read_text() and 'getent ' not in log.read_text()
         print(f'OK: {platform}, GUI={gui}, repeated install, backups, service, paths with spaces')

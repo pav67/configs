@@ -28,8 +28,11 @@ with tempfile.TemporaryDirectory() as temp:
     assert 'private-detail' in content and 'private-error' in content
     assert 'UNREACHABLE' not in content and 'Erreur (code 1)' in content
 
-    result = run('step "Installation"\n( exit 42 )\necho UNREACHABLE')
+    # Use a real child command: Bash 3.2 does not apply errexit to (exit N).
+    result = run('step "Installation"\nbash -c "exit 42"\necho UNREACHABLE')
     assert result.returncode == 42 and 'code 42' in result.stderr
+    result = run('UI_INSTALL_EXPECTED=1\nexit 0')
+    assert result.returncode == 1 and 'Installation terminée' not in result.stdout
     result = run('step "Préparation"\nUI_HINT="Homebrew absent"\nexit 7')
     assert result.returncode == 7 and 'Homebrew absent' in result.stderr
     result = run('step "Configuration"\ninteractive "Authentification" printf "PROMPT_VISIBLE\\n"\necho HIDDEN\n')

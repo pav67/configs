@@ -2,16 +2,49 @@
 set -Eeuo pipefail
 
 OS="$(uname -s)"
+USER="${USER:-$(id -un)}"
 SESSION_NAME="${TMUX_SHARED_SESSION:-shared}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/tmux-shared.service"
 BACKUP_TS="$(date +%Y%m%d-%H%M%S)-$$"
 export PATH="$HOME/.local/bin:$PATH"
+# shellcheck source=lib/components.sh
+source "$SCRIPT_DIR/lib/components.sh"
+# shellcheck source=lib/wizard.sh
+source "$SCRIPT_DIR/lib/wizard.sh"
 # shellcheck source=lib/install-ui.sh
 source "$SCRIPT_DIR/lib/install-ui.sh"
+MODE=wizard
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --all) MODE="batch"; REQUESTED="${COMPONENT_IDS[*]}"; shift;;
+        --components)
+            [ "$#" -ge 2 ] || { echo "--components attend une liste separee par des virgules" >&2; exit 2; }
+            parse_components "$2"; MODE="batch"; shift 2;;
+        --list) printf '%s\n' "${COMPONENT_IDS[@]}"; exit 0;;
+        --help|-h)
+            printf '%s\n' './install.sh : wizard plein ecran' './install.sh --all : tout installer sans wizard' './install.sh --components zsh,starship,tmux : selection explicite' './install.sh --list : identifiants disponibles'
+            exit 0;;
+        *) echo "Option inconnue : $1" >&2; exit 2;;
+    esac
+done
+if [ "$MODE" = wizard ] && { [ ! -t 0 ] || [ ! -t 1 ] || [ "${TERM:-dumb}" = dumb ]; }; then
+    echo "Un terminal interactif est requis. Utilise --all ou --components pour automatiser." >&2
+    exit 2
+fi
 ui_init
+UI_INSTALL_EXPECTED=1 UI_INSTALL_COMPLETE=0
 [[ "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { UI_HINT="Nom de session invalide"; exit 1; }
+if [ "$(id -u)" -eq 0 ]; then
+    UI_HINT="Utilise le compte qui utilisera le kit, pas root."; exit 1
+fi
+if [ "$MODE" = wizard ]; then
+    REQUESTED="${COMPONENT_IDS[*]}"
+    wizard
+fi
+resolve_components
+log "Composants explicites : $REQUESTED ; plan effectif : $COMPONENTS"
 
 backup_file() {
     local file="$1"
@@ -20,115 +53,6 @@ backup_file() {
         log "Sauvegarde : ${file}.bak.${BACKUP_TS}"
     fi
 }
-
-if [ "$(id -u)" -eq 0 ]; then
-    UI_HINT="Ne lance pas ce script en root : utilise le compte qui utilisera tmux et Zsh."
-    exit 1
-fi
-
-install_packages() {
-    log "Installation des dépendances : tmux, vim, neovim, zsh et outils shell..."
-
-    if [ "$OS" = Darwin ]; then
-        # Both standard prefixes; an existing custom brew in PATH takes priority.
-        if ! command -v brew >/dev/null 2>&1; then
-            for prefix in /opt/homebrew /usr/local; do
-                if [ -x "$prefix/bin/brew" ]; then
-                    eval "$("$prefix/bin/brew" shellenv)"
-                    break
-                fi
-            done
-        fi
-        if ! command -v brew >/dev/null 2>&1; then
-            UI_HINT="Homebrew requis : installe-le depuis https://brew.sh puis relance ./install.sh"
-            exit 1
-        fi
-        eval "$(brew shellenv)"
-        brew install tmux vim neovim zsh git curl python fzf fd bat ripgrep eza lf diffutils starship leaf-markdown-viewer
-    elif command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update
-        sudo apt-get install -y tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf
-    elif command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y tmux vim-enhanced neovim zsh git curl python3 procps-ng ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
-    elif command -v yum >/dev/null 2>&1; then
-        sudo yum install -y tmux vim-enhanced neovim zsh git curl python3 procps-ng ca-certificates tar xz unzip less diffutils fzf fd-find bat ripgrep eza lf
-    elif command -v pacman >/dev/null 2>&1; then
-        sudo pacman -Syu --needed --noconfirm tmux vim neovim zsh git curl python procps-ng ca-certificates tar xz unzip less diffutils fzf fd bat ripgrep eza lf
-    else
-        UI_HINT="Gestionnaire de paquets non reconnu ; consulte le journal."
-        echo "Installe manuellement : tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf"
-        exit 1
-    fi
-}
-
-step "Installation des dépendances"
-install_packages
-
-step "Starship, Leaf et vérification des outils"
-DOWNLOAD_DIR="$(mktemp -d)"
-mkdir -p "$HOME/.local/bin"
-if ! command -v starship >/dev/null 2>&1; then
-    log "Installation de Starship"
-    curl -fsSL https://starship.rs/install.sh -o "$DOWNLOAD_DIR/starship.sh"
-    sh "$DOWNLOAD_DIR/starship.sh" --yes --bin-dir "$HOME/.local/bin"
-fi
-if ! command -v leaf >/dev/null 2>&1; then
-    log "Installation de Leaf (RivoLink/leaf)"
-    curl -fsSL https://raw.githubusercontent.com/RivoLink/leaf/main/scripts/install.sh -o "$DOWNLOAD_DIR/leaf.sh"
-    sh "$DOWNLOAD_DIR/leaf.sh" "$HOME/.local/bin"
-fi
-
-for tool in eza rg fzf lf nvim starship leaf; do
-    command -v "$tool" >/dev/null || { UI_HINT="Dépendance manquante : $tool"; exit 1; }
-done
-
-step "Configuration de Starship et Codex"
-for target in .config/starship.toml .codex/config.toml; do
-    mkdir -p "$HOME/$(dirname "$target")"
-    backup_file "$HOME/$target"
-done
-install -m 0644 "$SCRIPT_DIR/starship.toml" "$HOME/.config/starship.toml"
-install -m 0600 "$SCRIPT_DIR/codex-config.toml" "$HOME/.codex/config.toml"
-
-step "Installation de l’identité tmux"
-mkdir -p "$HOME/.config/tmux"
-backup_file "$HOME/.config/tmux/status-identity.sh"
-install -m 0755 "$SCRIPT_DIR/tmux/status-identity.sh" "$HOME/.config/tmux/status-identity.sh"
-
-step "Installation de ~/.tmux.conf"
-backup_file "${HOME}/.tmux.conf"
-install -m 0644 "${SCRIPT_DIR}/tmux.conf" "${HOME}/.tmux.conf"
-
-step "Installation de ~/.vimrc"
-backup_file "${HOME}/.vimrc"
-install -m 0644 "${SCRIPT_DIR}/vimrc" "${HOME}/.vimrc"
-
-step "Installation de Oh My Zsh"
-if [ ! -d "${HOME}/.oh-my-zsh/.git" ]; then
-    if [ -e "${HOME}/.oh-my-zsh" ]; then
-        mv "${HOME}/.oh-my-zsh" "${HOME}/.oh-my-zsh.bak.${BACKUP_TS}"
-    fi
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-zsh"
-else
-    log "Oh My Zsh est déjà installé, conservation de l'installation existante."
-fi
-
-step "Installation des plugins Zsh"
-for plugin in zsh-vi-mode zsh-autosuggestions; do
-    case "$plugin" in
-        zsh-vi-mode) repo=jeffreytse/zsh-vi-mode ;;
-        zsh-autosuggestions) repo=zsh-users/zsh-autosuggestions ;;
-    esac
-    destination="$HOME/.oh-my-zsh/custom/plugins/$plugin"
-    if [ ! -d "$destination" ]; then
-        git clone --depth=1 "https://github.com/$repo.git" "$destination"
-    fi
-done
-# git et history-substring-search sont fournis par Oh My Zsh.
-
-step "Installation de ~/.zshrc"
-backup_file "${HOME}/.zshrc"
-install -m 0644 "${SCRIPT_DIR}/zshrc" "${HOME}/.zshrc"
 
 append_or_replace_block() {
     local target="$1"
@@ -162,6 +86,140 @@ target.write_text(text)
 PY
 }
 
+install_packages() {
+    local manager prefix
+    if [ "$OS" = Darwin ]; then
+        if ! command -v brew >/dev/null 2>&1; then
+            for prefix in /opt/homebrew /usr/local; do
+                if [ -x "$prefix/bin/brew" ]; then eval "$("$prefix/bin/brew" shellenv)"; break; fi
+            done
+        fi
+        if ! command -v brew >/dev/null 2>&1; then
+            UI_HINT="Installe Homebrew depuis https://brew.sh puis relance le kit."; exit 1
+        fi
+        eval "$(brew shellenv)"
+        manager=brew; packages=(python)
+    elif command -v apt-get >/dev/null 2>&1; then
+        manager=apt; packages=(python3)
+    elif command -v dnf >/dev/null 2>&1; then
+        manager=dnf; packages=(python3)
+    elif command -v yum >/dev/null 2>&1; then
+        manager=yum; packages=(python3)
+    elif command -v pacman >/dev/null 2>&1; then
+        manager=pacman; packages=(python)
+    else
+        UI_HINT="Gestionnaire de paquets non reconnu."; exit 1
+    fi
+    if selected zsh; then packages+=(zsh git); fi
+    if selected tools; then
+        packages+=(fzf bat ripgrep eza lf less diffutils)
+        case "$manager" in apt|dnf|yum) packages+=(fd-find);; *) packages+=(fd);; esac
+    fi
+    if selected tmux; then
+        packages+=(tmux)
+        case "$manager" in apt) packages+=(procps);; dnf|yum|pacman) packages+=(procps-ng);; esac
+    fi
+    if selected neovim; then packages+=(neovim); fi
+    if selected vim; then
+        case "$manager" in dnf|yum) packages+=(vim-enhanced);; *) packages+=(vim);; esac
+    fi
+    if [ "$manager" = brew ]; then
+        if selected starship; then packages+=(starship); fi
+        if selected leaf; then packages+=(leaf-markdown-viewer); fi
+    elif selected starship || selected leaf; then
+        packages+=(curl ca-certificates tar unzip)
+        if [ "$manager" = apt ]; then packages+=(xz-utils); else packages+=(xz); fi
+    fi
+    case "$manager" in
+        brew) brew install "${packages[@]}";;
+        apt) sudo apt-get update; sudo apt-get install -y "${packages[@]}";;
+        dnf|yum) sudo "$manager" install -y "${packages[@]}";;
+        pacman) sudo pacman -Syu --needed --noconfirm "${packages[@]}";;
+    esac
+}
+
+copy_config() {
+    local source=$1 target=$2 mode=${3:-0644}
+    mkdir -p "$(dirname "$target")"
+    backup_file "$target"
+    install -m "$mode" "$SCRIPT_DIR/$source" "$target"
+}
+
+step "Installation des dependances selectionnees"
+install_packages
+DOWNLOAD_DIR="$(mktemp -d)"
+mkdir -p "$HOME/.local/bin"
+if selected starship; then
+    step "Prompt Starship"
+    if ! command -v starship >/dev/null 2>&1; then
+        curl -fsSL https://starship.rs/install.sh -o "$DOWNLOAD_DIR/starship.sh"
+        sh "$DOWNLOAD_DIR/starship.sh" --yes --bin-dir "$HOME/.local/bin"
+    fi
+    copy_config starship.toml "$HOME/.config/starship.toml"
+fi
+if selected leaf; then
+    step "Lecteur Markdown Leaf"
+    if ! command -v leaf >/dev/null 2>&1; then
+        curl -fsSL https://raw.githubusercontent.com/RivoLink/leaf/main/scripts/install.sh -o "$DOWNLOAD_DIR/leaf.sh"
+        sh "$DOWNLOAD_DIR/leaf.sh" "$HOME/.local/bin"
+    fi
+fi
+if selected codex; then
+    step "Preferences Codex"
+    copy_config codex-config.toml "$HOME/.codex/config.toml" 0600
+fi
+if selected tmux; then
+    step "Tmux et identite reseau"
+    copy_config tmux/status-identity.sh "$HOME/.config/tmux/status-identity.sh" 0755
+    copy_config tmux.conf "$HOME/.tmux.conf"
+fi
+if selected vim; then
+    step "Configuration Vim"
+    copy_config vimrc "$HOME/.vimrc"
+fi
+if selected zsh; then
+step "Installation de Oh My Zsh"
+if [ ! -d "${HOME}/.oh-my-zsh/.git" ]; then
+    if [ -e "${HOME}/.oh-my-zsh" ]; then
+        mv "${HOME}/.oh-my-zsh" "${HOME}/.oh-my-zsh.bak.${BACKUP_TS}"
+    fi
+    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-zsh"
+else
+    log "Oh My Zsh est déjà installé, conservation de l'installation existante."
+fi
+
+step "Installation des plugins Zsh"
+for plugin in zsh-vi-mode zsh-autosuggestions; do
+    case "$plugin" in
+        zsh-vi-mode) repo=jeffreytse/zsh-vi-mode ;;
+        zsh-autosuggestions) repo=zsh-users/zsh-autosuggestions ;;
+    esac
+    destination="$HOME/.oh-my-zsh/custom/plugins/$plugin"
+    if [ ! -d "$destination" ]; then
+        git clone --depth=1 "https://github.com/$repo.git" "$destination"
+    fi
+done
+# git et history-substring-search sont fournis par Oh My Zsh.
+
+step "Installation de ~/.zshrc"
+backup_file "${HOME}/.zshrc"
+install -m 0644 "${SCRIPT_DIR}/zshrc" "${HOME}/.zshrc"
+
+# Session is opt-in; do not ship the embedded auto-attach block when omitted.
+    if ! selected session; then
+        python3 - "$HOME/.zshrc" <<'STRIP'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+a = s.index("# >>> tmux-shared auto-attach >>>")
+b = s.index("# <<< tmux-shared auto-attach <<<") + len("# <<< tmux-shared auto-attach <<<")
+p.write_text(s[:a] + s[b:])
+STRIP
+    fi
+fi
+
+if selected session; then
 # Garde le comportement pour Bash/sh.
 step "Configuration de l'auto-attach SSH dans ~/.profile"
 backup_file "${HOME}/.profile"
@@ -171,16 +229,25 @@ append_or_replace_block "${HOME}/.profile" "${SCRIPT_DIR}/profile-snippet.sh"
 log "Configuration de l'auto-attach SSH dans ~/.zshrc"
 append_or_replace_block "${HOME}/.zshrc" "${SCRIPT_DIR}/profile-snippet.sh"
 
-step "Passage de Zsh comme shell par défaut"
-ZSH_BIN="$(command -v zsh)"
-if [ "$OS" = Darwin ]; then
-    # /bin/zsh is already in /etc/shells; no system allowlist changes required.
-    ZSH_BIN=/bin/zsh
-    CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')"
-    if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
-        interactive "Changement du shell de connexion (mot de passe macOS si demandé)" chsh -s "$ZSH_BIN"
-    fi
+fi
 
+if selected default-shell; then
+    step "Shell de connexion Zsh"
+    ZSH_BIN="$(command -v zsh)"
+    if [ "$OS" = Darwin ]; then
+        ZSH_BIN=/bin/zsh
+        CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')"
+        if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
+            interactive "Changement du shell de connexion" chsh -s "$ZSH_BIN"
+        fi
+    else
+        CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7 || true)"
+        if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then sudo chsh -s "$ZSH_BIN" "$USER"; fi
+    fi
+fi
+
+if selected session; then
+if [ "$OS" = Darwin ]; then
     step "Installation du LaunchAgent tmux (ouverture de session macOS)"
     SERVICE_FILE="$HOME/Library/LaunchAgents/net.pav67.tmux-shared.plist"
     mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
@@ -214,12 +281,7 @@ PLIST
     else
         log "Pas de session graphique : LaunchAgent activé à la prochaine connexion graphique."
     fi
-    SERVICE_STATUS="launchctl print $DOMAIN/net.pav67.tmux-shared"
 else
-    CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7 || true)"
-    if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
-        sudo chsh -s "$ZSH_BIN" "$USER"
-    fi
     step "Installation du service systemd utilisateur"
     mkdir -p "${USER_SYSTEMD_DIR}"
     backup_file "$SERVICE_FILE"
@@ -236,52 +298,23 @@ else
         log "loginctl absent : le service utilisateur démarrera au login, pas forcément au boot."
     fi
 
-    SERVICE_STATUS="systemctl --user status tmux-shared.service"
 fi
 
 step "Vérification de la session tmux"
 tmux has-session -t "=${SESSION_NAME}" 2>/dev/null || \
     tmux new-session -d -s "${SESSION_NAME}" || tmux has-session -t "=${SESSION_NAME}"
 
-cat <<EOF
+fi
 
-Installation terminée.
-
-Shell par défaut :
-  ${ZSH_BIN}
-
-Session tmux :
-  ${SESSION_NAME}
-
-Fichiers installés :
-  ~/.tmux.conf
-  ~/.config/tmux/status-identity.sh
-  ~/.vimrc
-  ~/.zshrc
-  ~/.config/starship.toml
-  ~/.codex/config.toml
-  ~/.oh-my-zsh/
-  ${SERVICE_FILE}
-
-Sauvegardes éventuelles :
-  *.bak.${BACKUP_TS}
-
-Commandes utiles :
-  tmux attach -t ${SESSION_NAME}
-  tmux ls
-  ${SERVICE_STATUS}
-  exec zsh
-
-Bindings tmux supplémentaires :
-  F2  : nouvelle fenêtre
-  F3  : fenêtre précédente
-  F4  : fenêtre suivante
-  F10 : tuer la fenêtre courante avec confirmation
-
-Starship et Leaf déjà présents sont conservés.
-Codex CLI et OpenCode : installation/authentification séparées.
-Sélectionne une Nerd Font dans ton terminal pour afficher les icônes.
-
-Déconnecte/reconnecte ta session SSH pour prendre en compte le shell
-par défaut et tomber directement dans la session tmux partagée.
-EOF
+step "Verification des composants"
+for component in $COMPONENTS; do
+    case "$component" in
+        zsh) command -v zsh;;
+        tools) for tool in eza rg fzf lf; do command -v "$tool"; done;;
+        starship|tmux|leaf|vim) command -v "$component";;
+        neovim) command -v nvim;;
+    esac
+done
+log "Installation terminee. Selection : $COMPONENTS"
+log "Sauvegardes : *.bak.$BACKUP_TS"
+UI_INSTALL_COMPLETE=1

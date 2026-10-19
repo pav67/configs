@@ -33,3 +33,4 @@ jobs:
           python3 tests/check_native_identity.py
           python3 tests/check_auto_attach.py
           python3 tests/check_install_ui.py
+          python3 tests/check_wizard.py
