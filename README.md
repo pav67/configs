@@ -24,6 +24,33 @@ git pull
 
 Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`, notamment `.profile`, la configuration Codex et le service systemd. Les installations existantes de Starship, Leaf, Oh My Zsh et de ses plugins sont conservées. Les paquets suivent le gestionnaire de la distribution.
 
+## Progression et journaux d'installation
+
+L'installateur affiche les étapes avec une animation discrète, puis une coche et leur durée :
+
+```text
+  SHELL KIT
+  Ton environnement, prêt à travailler.
+
+  ✓ 01 · Installation des dépendances (12s)
+  ✓ 02 · Starship, Leaf et vérification des outils (3s)
+  ⠹ 03 · Configuration de Starship et Codex (1s)
+```
+
+Les sorties standard et d'erreur des sous-commandes, les sauvegardes et le récapitulatif détaillé sont écrits dans un journal distinct pour chaque exécution :
+
+```text
+${XDG_STATE_HOME:-$HOME/.local/state}/shell-kit/install-DATE-HEURE-XXXXXX
+```
+
+Son chemin exact est affiché au début et à la fin. Le dossier est privé (700) et les fichiers sont lisibles uniquement par leur propriétaire (600). Pour suivre le détail depuis un autre terminal : `tail -f /chemin/affiché/du/journal`.
+
+En cas d'échec, l'animation s'arrête, l'étape et le code d'erreur sont affichés, ainsi qu'une indication lorsque l'erreur est connue (Homebrew absent, par exemple). Les diagnostics complets restent dans le journal ; l'installateur s'arrête avec le code d'erreur de la commande. Une interruption arrête également l'animation. Les fichiers déjà installés ne sont pas annulés automatiquement ; leurs sauvegardes sont conservées.
+
+Les demandes de mot de passe sudo ou de changement de shell macOS restent visibles, animation suspendue. Les commandes d'installation restent au premier plan : leurs changements de variables et leurs erreurs ne sont pas perdus dans un processus séparé.
+
+Sans terminal interactif (redirection ou CI), l'affichage devient une liste statique, sans séquences de contrôle. `NO_COLOR=1 ./install.sh` désactive les couleurs. Le journal n'est ni ajouté au dépôt ni envoyé à un service externe.
+
 ## Installation sur MacBook
 
 Le même kit gère les chemins Homebrew Apple Silicon (`/opt/homebrew`) et Intel (`/usr/local`). Il faut une version de macOS prise en charge par Homebrew ; la disponibilité de certains paquets sur Intel dépend de Homebrew.
@@ -223,11 +250,12 @@ La souris permet de sélectionner/redimensionner les panneaux et de parcourir l'
 ```bash
 bash -n install.sh
 zsh -n zshrc
-shellcheck install.sh profile-snippet.sh tmux/status-identity.sh
+shellcheck -x install.sh lib/*.sh profile-snippet.sh tmux/*.sh
 python3 tests/check_install.py
 python3 tests/check_theme.py
 python3 tests/check_native_identity.py
 python3 tests/check_auto_attach.py
+python3 tests/check_install_ui.py
 ```
 
 Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau Linux/macOS dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Le test natif vérifie également la détection du premier plan avec le vrai `ps` dans un pseudo-terminal. Ces contrôles sont exécutés par GitHub Actions sur Linux et macOS ; ils ne remplacent pas un essai complet du LaunchAgent dans une session graphique réelle.
