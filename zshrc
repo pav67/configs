@@ -9,8 +9,14 @@ if [[ "$OSTYPE" == darwin* ]]; then
   fi
 fi
 export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
-export EDITOR=nvim
-export VISUAL=nvim
+if command -v nvim >/dev/null 2>&1; then
+  export EDITOR=nvim
+elif command -v vim >/dev/null 2>&1; then
+  export EDITOR=vim
+else
+  export EDITOR=vi
+fi
+export VISUAL="$EDITOR"
 
 export ZSH="$HOME/.oh-my-zsh"
 
@@ -201,4 +207,9 @@ zvm_after_init() {
 # opencode
 export PATH="$HOME/.opencode/bin:$PATH"
 
-eval "$(starship init zsh)"
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+else
+  # A clean fallback when the Starship component is not selected.
+  PROMPT='%F{blue}%~%f %# '
+fi

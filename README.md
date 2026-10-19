@@ -24,6 +24,48 @@ git pull
 
 Les fichiers remplacés sont sauvegardés avec le suffixe `.bak.DATE-HEURE-PID`, notamment `.profile`, la configuration Codex et le service systemd. Les installations existantes de Starship, Leaf, Oh My Zsh et de ses plugins sont conservées. Les paquets suivent le gestionnaire de la distribution.
 
+## V2 : wizard plein ecran
+
+`./install.sh` ouvre un assistant natif Bash, sans outil d'interface supplémentaire à installer. Un écran ASCII présente les composants ; le récapitulatif permet de revenir à la sélection avant toute installation.
+
+- **Flèches / j / k** : se déplacer ; **Espace** : cocher/décocher.
+- **A** : tout sélectionner ; **N** : tout désélectionner.
+- **Entrée** : récapitulatif, puis lancement ; **R** : revenir depuis le récapitulatif.
+- **Q** : quitter sans installer. Un journal peut être créé, mais aucun composant n'est modifié.
+
+Le terminal doit faire au moins **70 colonnes × 24 lignes**. L'écran alternatif est restauré à la fin, en cas d'erreur ou d'interruption. Pendant l'installation, les cinq dernières étapes terminées et l'étape animée restent visibles. Les mots de passe restent demandés au premier plan.
+
+| Identifiant | Ce qui est installé / configuré |
+|---|---|
+| `zsh` | Zsh, Oh My Zsh, plugins et remplacement de `.zshrc` |
+| `tools` | eza, bat, ripgrep, fd, fzf, lf, less, diffutils |
+| `starship` | Starship et son thème ; activé par le `.zshrc` du kit |
+| `tmux` | tmux, thème et script d'identité réseau |
+| `session` | Service persistant, session et auto-attachement dans `.profile` / `.zshrc` |
+| `neovim` | Neovim, sans configuration personnalisée |
+| `vim` | Vim et `.vimrc` |
+| `leaf` | Lecteur Markdown Leaf |
+| `codex` | Préférences Codex uniquement, sans CLI ni authentification |
+| `default-shell` | Passage de l'utilisateur à Zsh comme shell de connexion |
+
+Les dépendances automatiques apparaissent avec `[+]` : **Zsh → tools**, **session → tmux**, **default-shell → Zsh → tools**. Pour supprimer une dépendance, désélectionner aussi le composant qui la requiert. Python reste une dépendance technique commune. Les composants ignorés ne sont pas désinstallés ; leurs fichiers ne sont pas modifiés, sauf les fichiers explicitement partagés indiqués dans le tableau (`.zshrc` pour `zsh` et `session`).
+
+Sans Starship, le `.zshrc` dispose d'un prompt simple. Sans Neovim, l'éditeur choisi est Vim s'il existe, sinon vi. Installer Starship seul ne réécrit pas ton shell existant : il faut déjà son initialisation, ou choisir aussi Zsh. Choisir Zsh sans session installe un `.zshrc` sans bloc d'auto-attachement ; cela ne désactive pas un service tmux déjà installé.
+
+### Automatisation et installations ciblées
+
+Sans terminal, le script exige un choix explicite et ne lance rien par défaut :
+
+```bash
+./install.sh --all
+./install.sh --components zsh,starship,tmux,neovim
+./install.sh --components codex
+./install.sh --list
+./install.sh --help
+```
+
+`--all` retrouve le comportement complet de la v1, avec la progression en ligne et les journaux. `--components` applique la sélection sans ouvrir le wizard ; les dépendances sont ajoutées automatiquement. Les sauvegardes et la gestion des erreurs sont identiques dans les deux modes.
+
 ## Progression et journaux d'installation
 
 L'installateur affiche les étapes avec une animation discrète, puis une coche et leur durée :
@@ -256,6 +298,7 @@ python3 tests/check_theme.py
 python3 tests/check_native_identity.py
 python3 tests/check_auto_attach.py
 python3 tests/check_install_ui.py
+python3 tests/check_wizard.py
 ```
 
 Le test Python nécessite Python 3.11+ et Zsh. Il simule les opérations système et réseau Linux/macOS dans un HOME temporaire : il vérifie la réinstallation, les sauvegardes, les permissions et le nom de session, sans installer de paquets. Le test natif vérifie également la détection du premier plan avec le vrai `ps` dans un pseudo-terminal. Ces contrôles sont exécutés par GitHub Actions sur Linux et macOS ; ils ne remplacent pas un essai complet du LaunchAgent dans une session graphique réelle.

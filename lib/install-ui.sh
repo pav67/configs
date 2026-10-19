@@ -17,6 +17,8 @@ ui_init() {
     fi
     UI_STEP='' UI_SPINNER='' UI_COUNT=0 UI_START=$SECONDS UI_STEP_START=$SECONDS
     UI_ERROR_LINE='' UI_HINT='' DOWNLOAD_DIR=''
+    UI_FULLSCREEN=0 UI_CANCELLED=0
+    UI_DONE=()
     exec >>"$LOG_FILE" 2>&1
     trap 'ui_error "$?" "$LINENO" "$BASH_COMMAND"' ERR
     trap 'ui_exit "$?"' EXIT
@@ -64,8 +66,12 @@ ui_start_spinner() {
 ui_finish_step() {
     ui_stop_spinner
     if [ -n "$UI_STEP" ]; then
+        if [ "${UI_FULLSCREEN:-0}" = 1 ]; then
+            UI_DONE+=("$UI_STEP ($((SECONDS - UI_STEP_START))s)")
+        else
         printf '  %s✓%s %02d · %s %s(%ss)%s\n' "$UI_GREEN" "$UI_RESET" \
             "$UI_COUNT" "$UI_STEP" "$UI_DIM" "$((SECONDS - UI_STEP_START))" "$UI_RESET" >&3
+        fi
         log "Étape terminée : $UI_STEP"
     fi
 }
@@ -75,6 +81,18 @@ step() {
     UI_STEP=$1 UI_STEP_START=$SECONDS
     UI_COUNT=$((UI_COUNT + 1))
     log "Étape $UI_COUNT : $UI_STEP"
+    if [ "${UI_FULLSCREEN:-0}" = 1 ]; then
+        local i first
+        printf '\033[H\033[2J' >&3
+        wizard_header
+        printf '  INSTALLATION  /  etape %s\n\n' "$UI_COUNT" >&3
+        first=$((${#UI_DONE[@]} - 5))
+        if [ "$first" -lt 0 ]; then first=0; fi
+        for ((i=first; i<${#UI_DONE[@]}; i++)); do
+            printf '  %s✓%s %s\n' "$UI_GREEN" "$UI_RESET" "${UI_DONE[$i]}" >&3
+        done
+        printf '\n' >&3
+    fi
     ui_start_spinner
 }
 
@@ -103,10 +121,19 @@ ui_error() {
 ui_exit() {
     local status=$1
     trap - EXIT ERR INT TERM
+    if [ "${UI_FULLSCREEN:-0}" = 1 ]; then
+        ui_stop_spinner
+        printf '\033[?1049l' >&3
+        UI_FULLSCREEN=0
+    fi
+    if [ "${UI_CANCELLED:-0}" = 1 ]; then
+        printf '  Installation annulee ; aucun composant modifie.\n' >&3
+        exit "$status"
+    fi
     if [ "$status" -eq 0 ]; then
         ui_finish_step
         printf '\n  %s✓ Installation terminée%s en %ss\n' "$UI_GREEN" "$UI_RESET" "$((SECONDS - UI_START))" >&3
-        printf '  Session : %s · Pour démarrer : exec zsh\n' "${SESSION_NAME:-shared}" >&3
+        printf '  Composants : %s\n' "${COMPONENTS:-installation complete}" >&3
     else
         ui_stop_spinner
         printf '\n  %s✗ %s%s — code %s\n' "$UI_RED" "${UI_STEP:-Préparation}" "$UI_RESET" "$status" >&4
