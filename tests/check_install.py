@@ -20,7 +20,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
         log = root / 'commands'
         commands = {name: 'exit 0' for name in [
             'apt-get', 'sudo', 'systemctl', 'loginctl', 'tmux', 'leaf', 'starship',
-            'eza', 'rg', 'fzf', 'lf', 'nvim', 'chsh',
+            'eza', 'rg', 'fzf', 'lf', 'nvim', 'vim', 'chsh',
         ]}
         commands['sudo'] = '[ "${TEST_FAIL:-}" != "$*" ] || { echo PACKAGE_FAILED >&2; exit 42; }'
         commands.update({

@@ -116,11 +116,17 @@ ui_error() {
     local status=$1
     UI_ERROR_LINE=$2
     log "Erreur (code $status), ligne $2 : $3"
+    return "$status"
 }
 
 ui_exit() {
     local status=$1
     trap - EXIT ERR INT TERM
+    # Bash 3.2 can report status 0 to EXIT after a fatal expansion error.
+    if [ "$status" -eq 0 ] && [ "${UI_INSTALL_EXPECTED:-0}" = 1 ] &&
+       [ "${UI_INSTALL_COMPLETE:-0}" != 1 ] && [ "${UI_CANCELLED:-0}" != 1 ]; then
+        status=1
+    fi
     if [ "${UI_FULLSCREEN:-0}" = 1 ]; then
         ui_stop_spinner
         printf '\033[?1049l' >&3

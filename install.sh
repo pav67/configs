@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 OS="$(uname -s)"
+USER="${USER:-$(id -un)}"
 SESSION_NAME="${TMUX_SHARED_SESSION:-shared}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
@@ -33,6 +34,7 @@ if [ "$MODE" = wizard ] && { [ ! -t 0 ] || [ ! -t 1 ] || [ "${TERM:-dumb}" = dum
     exit 2
 fi
 ui_init
+UI_INSTALL_EXPECTED=1 UI_INSTALL_COMPLETE=0
 [[ "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { UI_HINT="Nom de session invalide"; exit 1; }
 if [ "$(id -u)" -eq 0 ]; then
     UI_HINT="Utilise le compte qui utilisera le kit, pas root."; exit 1
@@ -315,3 +317,4 @@ for component in $COMPONENTS; do
 done
 log "Installation terminee. Selection : $COMPONENTS"
 log "Sauvegardes : *.bak.$BACKUP_TS"
+UI_INSTALL_COMPLETE=1
