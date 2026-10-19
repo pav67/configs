@@ -25,10 +25,11 @@ jobs:
         run: |
           bash -n install.sh
           zsh -n zshrc
-          shellcheck install.sh profile-snippet.sh tmux/*.sh
+          shellcheck -x install.sh lib/*.sh profile-snippet.sh tmux/*.sh
       - name: Installer and themes
         run: |
           python3 tests/check_install.py
           python3 tests/check_theme.py
           python3 tests/check_native_identity.py
           python3 tests/check_auto_attach.py
+          python3 tests/check_install_ui.py

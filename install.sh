@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 OS="$(uname -s)"
 SESSION_NAME="${TMUX_SHARED_SESSION:-shared}"
@@ -8,11 +8,10 @@ USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/tmux-shared.service"
 BACKUP_TS="$(date +%Y%m%d-%H%M%S)-$$"
 export PATH="$HOME/.local/bin:$PATH"
-[[ "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Nom de session invalide" >&2; exit 1; }
-
-log() {
-    printf '[shell-kit] %s\n' "$*"
-}
+# shellcheck source=lib/install-ui.sh
+source "$SCRIPT_DIR/lib/install-ui.sh"
+ui_init
+[[ "$SESSION_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || { UI_HINT="Nom de session invalide"; exit 1; }
 
 backup_file() {
     local file="$1"
@@ -23,8 +22,7 @@ backup_file() {
 }
 
 if [ "$(id -u)" -eq 0 ]; then
-    echo "Ne lance pas ce script en root."
-    echo "Lance-le avec l'utilisateur qui utilisera tmux/zsh."
+    UI_HINT="Ne lance pas ce script en root : utilise le compte qui utilisera tmux et Zsh."
     exit 1
 fi
 
@@ -42,7 +40,7 @@ install_packages() {
             done
         fi
         if ! command -v brew >/dev/null 2>&1; then
-            log "Homebrew requis : installe-le depuis https://brew.sh puis relance ./install.sh"
+            UI_HINT="Homebrew requis : installe-le depuis https://brew.sh puis relance ./install.sh"
             exit 1
         fi
         eval "$(brew shellenv)"
@@ -57,16 +55,17 @@ install_packages() {
     elif command -v pacman >/dev/null 2>&1; then
         sudo pacman -Syu --needed --noconfirm tmux vim neovim zsh git curl python procps-ng ca-certificates tar xz unzip less diffutils fzf fd bat ripgrep eza lf
     else
-        echo "Gestionnaire de paquets non reconnu."
+        UI_HINT="Gestionnaire de paquets non reconnu ; consulte le journal."
         echo "Installe manuellement : tmux vim neovim zsh git curl python3 procps ca-certificates tar xz-utils unzip less diffutils fzf fd-find bat ripgrep eza lf"
         exit 1
     fi
 }
 
+step "Installation des dépendances"
 install_packages
 
+step "Starship, Leaf et vérification des outils"
 DOWNLOAD_DIR="$(mktemp -d)"
-trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 mkdir -p "$HOME/.local/bin"
 if ! command -v starship >/dev/null 2>&1; then
     log "Installation de Starship"
@@ -80,9 +79,10 @@ if ! command -v leaf >/dev/null 2>&1; then
 fi
 
 for tool in eza rg fzf lf nvim starship leaf; do
-    command -v "$tool" >/dev/null || { log "Dépendance manquante : $tool"; exit 1; }
+    command -v "$tool" >/dev/null || { UI_HINT="Dépendance manquante : $tool"; exit 1; }
 done
 
+step "Configuration de Starship et Codex"
 for target in .config/starship.toml .codex/config.toml; do
     mkdir -p "$HOME/$(dirname "$target")"
     backup_file "$HOME/$target"
@@ -90,20 +90,20 @@ done
 install -m 0644 "$SCRIPT_DIR/starship.toml" "$HOME/.config/starship.toml"
 install -m 0600 "$SCRIPT_DIR/codex-config.toml" "$HOME/.codex/config.toml"
 
-log "Installation de l’identité tmux"
+step "Installation de l’identité tmux"
 mkdir -p "$HOME/.config/tmux"
 backup_file "$HOME/.config/tmux/status-identity.sh"
 install -m 0755 "$SCRIPT_DIR/tmux/status-identity.sh" "$HOME/.config/tmux/status-identity.sh"
 
-log "Installation de ~/.tmux.conf"
+step "Installation de ~/.tmux.conf"
 backup_file "${HOME}/.tmux.conf"
 install -m 0644 "${SCRIPT_DIR}/tmux.conf" "${HOME}/.tmux.conf"
 
-log "Installation de ~/.vimrc"
+step "Installation de ~/.vimrc"
 backup_file "${HOME}/.vimrc"
 install -m 0644 "${SCRIPT_DIR}/vimrc" "${HOME}/.vimrc"
 
-log "Installation de Oh My Zsh"
+step "Installation de Oh My Zsh"
 if [ ! -d "${HOME}/.oh-my-zsh/.git" ]; then
     if [ -e "${HOME}/.oh-my-zsh" ]; then
         mv "${HOME}/.oh-my-zsh" "${HOME}/.oh-my-zsh.bak.${BACKUP_TS}"
@@ -113,7 +113,7 @@ else
     log "Oh My Zsh est déjà installé, conservation de l'installation existante."
 fi
 
-log "Installation des plugins Zsh"
+step "Installation des plugins Zsh"
 for plugin in zsh-vi-mode zsh-autosuggestions; do
     case "$plugin" in
         zsh-vi-mode) repo=jeffreytse/zsh-vi-mode ;;
@@ -126,7 +126,7 @@ for plugin in zsh-vi-mode zsh-autosuggestions; do
 done
 # git et history-substring-search sont fournis par Oh My Zsh.
 
-log "Installation de ~/.zshrc"
+step "Installation de ~/.zshrc"
 backup_file "${HOME}/.zshrc"
 install -m 0644 "${SCRIPT_DIR}/zshrc" "${HOME}/.zshrc"
 
@@ -163,7 +163,7 @@ PY
 }
 
 # Garde le comportement pour Bash/sh.
-log "Configuration de l'auto-attach SSH dans ~/.profile"
+step "Configuration de l'auto-attach SSH dans ~/.profile"
 backup_file "${HOME}/.profile"
 append_or_replace_block "${HOME}/.profile" "${SCRIPT_DIR}/profile-snippet.sh"
 
@@ -171,17 +171,17 @@ append_or_replace_block "${HOME}/.profile" "${SCRIPT_DIR}/profile-snippet.sh"
 log "Configuration de l'auto-attach SSH dans ~/.zshrc"
 append_or_replace_block "${HOME}/.zshrc" "${SCRIPT_DIR}/profile-snippet.sh"
 
-log "Passage de Zsh comme shell par défaut"
+step "Passage de Zsh comme shell par défaut"
 ZSH_BIN="$(command -v zsh)"
 if [ "$OS" = Darwin ]; then
     # /bin/zsh is already in /etc/shells; no system allowlist changes required.
     ZSH_BIN=/bin/zsh
     CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')"
     if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
-        chsh -s "$ZSH_BIN"
+        interactive "Changement du shell de connexion (mot de passe macOS si demandé)" chsh -s "$ZSH_BIN"
     fi
 
-    log "Installation du LaunchAgent tmux (ouverture de session macOS)"
+    step "Installation du LaunchAgent tmux (ouverture de session macOS)"
     SERVICE_FILE="$HOME/Library/LaunchAgents/net.pav67.tmux-shared.plist"
     mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
     backup_file "$SERVICE_FILE"
@@ -220,7 +220,7 @@ else
     if [ "$CURRENT_SHELL" != "$ZSH_BIN" ]; then
         sudo chsh -s "$ZSH_BIN" "$USER"
     fi
-    log "Installation du service systemd utilisateur"
+    step "Installation du service systemd utilisateur"
     mkdir -p "${USER_SYSTEMD_DIR}"
     backup_file "$SERVICE_FILE"
     sed "s/Environment=TMUX_SHARED_SESSION=shared/Environment=TMUX_SHARED_SESSION=${SESSION_NAME}/" \
@@ -239,7 +239,7 @@ else
     SERVICE_STATUS="systemctl --user status tmux-shared.service"
 fi
 
-log "Vérification de la session tmux"
+step "Vérification de la session tmux"
 tmux has-session -t "=${SESSION_NAME}" 2>/dev/null || \
     tmux new-session -d -s "${SESSION_NAME}" || tmux has-session -t "=${SESSION_NAME}"
 

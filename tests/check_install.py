@@ -22,6 +22,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
             'apt-get', 'sudo', 'systemctl', 'loginctl', 'tmux', 'leaf', 'starship',
             'eza', 'rg', 'fzf', 'lf', 'nvim', 'chsh',
         ]}
+        commands['sudo'] = '[ "${TEST_FAIL:-}" != "$*" ] || { echo PACKAGE_FAILED >&2; exit 42; }'
         commands.update({
             'uname': 'echo "$TEST_OS"',
             'id': 'echo 1000',
@@ -29,7 +30,7 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
             'getent': 'echo "tester:x:1000:1000::/tmp:/bin/zsh"',
             'brew': '[ "$1" != shellenv ] || echo "export HOMEBREW_PREFIX=/test/homebrew"',
             'launchctl': '[ "$TEST_GUI" = yes ]',
-            'git': 'for dest do :; done\nmkdir -p "$dest/.git"',
+            'git': 'echo CLONE_DETAIL; echo CLONE_STDERR >&2; for dest do :; done\nmkdir -p "$dest/.git"',
             'curl': 'echo "Unexpected download" >&2; exit 1',
         })
         for name, body in commands.items():
@@ -38,13 +39,20 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
             path.chmod(0o755)
         env = {**os.environ, 'HOME': str(home), 'PATH': str(bin_dir) + ':' + os.environ['PATH'],
                'TMUX_SHARED_SESSION': 'custom-test', 'TEST_OS': platform,
-               'TEST_GUI': 'yes' if gui else 'no', 'TEST_LOG': str(log)}
+               'TEST_GUI': 'yes' if gui else 'no', 'TEST_LOG': str(log), 'XDG_STATE_HOME': str(home / '.local/state')}
         (home / '.profile').write_text('# personal profile\n')
         (home / '.codex').mkdir()
         (home / '.codex/config.toml').write_text('# existing config\n')
         for _ in range(2):
             result = subprocess.run(['bash', str(repo / 'install.sh')], env=env, capture_output=True, text=True)
             assert result.returncode == 0, result.stdout + result.stderr
+        assert 'CLONE_DETAIL' not in result.stdout + result.stderr
+        assert 'Journal complet :' in result.stdout
+        assert '\x1b' not in result.stdout  # redirected output never animates
+        logs = list((home / '.local/state/shell-kit').glob('install-*'))
+        assert len(logs) == 2
+        assert all(path.stat().st_mode & 0o777 == 0o600 for path in logs)
+        assert any('CLONE_DETAIL' in path.read_text() and 'CLONE_STDERR' in path.read_text() for path in logs)
         for name in ['.profile', '.zshrc']:
             data = (home / name).read_text()
             assert data.count('# >>> tmux-shared auto-attach >>>') == 1
@@ -71,4 +79,13 @@ for platform, gui in [('Linux', True), ('Darwin', True), ('Darwin', False)]:
             assert 'systemctl ' not in calls and 'loginctl ' not in calls and 'getent ' not in calls
             assert ('launchctl bootstrap gui/1000' in calls) == gui
             assert ('launchctl bootout gui/1000/net.pav67.tmux-shared' in calls) == gui
+        if platform == 'Linux':
+            failed = subprocess.run(['bash', str(repo / 'install.sh')],
+                                    env={**env, 'TEST_FAIL': '-n apt-get update'},
+                                    capture_output=True, text=True)
+            assert failed.returncode == 42, failed.stdout + failed.stderr
+            assert 'Installation des dépendances' in failed.stderr
+            assert 'PACKAGE_FAILED' not in failed.stdout + failed.stderr
+            assert 'Installation terminée' not in failed.stdout
+            assert 'Configuration de Starship et Codex' not in failed.stdout
         print(f'OK: {platform}, GUI={gui}, repeated install, backups, service, paths with spaces')
