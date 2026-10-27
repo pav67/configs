@@ -103,6 +103,8 @@ Dans Neovim, modifie la commande, puis utilise `:wq` pour revenir au prompt. Rel
 
 Les raccourcis personnalisés sont installés dans `zvm_after_init()`, après ceux du plugin, pour éviter qu'ils soient écrasés.
 
+La touche **Insert est explicitement désassignée en mode insertion** (`viins`), pour éviter les conflits avec le collage par `Shift-Insert`. Cela couvre la séquence habituelle `Esc [ 2 ~` et celle déclarée par le terminal (`terminfo[kich1]`). Les bindings des autres modes et le collage encadré (*bracketed paste*) sont conservés. Le raccourci `Shift-Insert` lui-même reste géré par le terminal.
+
 En **insertion** :
 
 | Raccourci | Fonction |

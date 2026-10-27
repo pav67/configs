@@ -185,6 +185,12 @@ ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
 # must be registered via this hook to survive.
 zvm_after_init() {
 
+  # Keep Insert unbound in insert mode (avoids conflicts with Shift+Insert).
+  bindkey -M viins -r '^[[2~'
+  if [[ -n "${terminfo[kich1]-}" ]]; then
+    bindkey -M viins -r "$terminfo[kich1]"
+  fi
+
   _source_fzf key-bindings || source <(fzf --zsh)
 
   # Ctrl+Right -> move forward one word (^[[1;5C is the terminal escape code)
