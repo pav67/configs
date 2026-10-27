@@ -103,6 +103,10 @@ Dans Neovim, modifie la commande, puis utilise `:wq` pour revenir au prompt. Rel
 
 Les raccourcis personnalisés sont installés dans `zvm_after_init()`, après ceux du plugin, pour éviter qu'ils soient écrasés.
 
+La touche **Insert est neutralisée en mode insertion** (`viins`) : sa séquence complète déclenche une action vide, enregistrée via `zvm_bindkey`. Il ne faut pas simplement désassigner la touche : le lecteur NEX du plugin peut alors interpréter `Esc [ 2 ~` comme Échap suivi de commandes Vim, dont `~` qui inverse la casse. La séquence standard, celle du terminal (`terminfo[kich1]`) et la variante `Esc [ 2 ; 2 ~` de Shift-Insert sont consommées sans modifier le texte ni le mode. `Échap` seul reste actif. Le collage par `Shift-Insert` reste géré par le terminal ; s'il transmet seulement une séquence de touche, Zsh n'a pas accès au presse-papiers. Le collage encadré (*bracketed paste*) est conservé.
+
+Le test `python3 tests/check_zsh_keys.py` exerce les vraies frappes dans un pseudo-terminal avec les plugins installés sur le poste : Échap, retour en insertion, Insert, Shift-Insert et collage avec conservation de la casse.
+
 En **insertion** :
 
 | Raccourci | Fonction |

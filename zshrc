@@ -185,6 +185,16 @@ ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
 # must be registered via this hook to survive.
 zvm_after_init() {
 
+  # Consume Insert as a complete sequence: leaving it unbound lets NEX
+  # interpret its Escape prefix and trailing ~ as normal-mode commands.
+  _shell_kit_ignore_insert() { :; }
+  zle -N _shell_kit_ignore_insert
+  zvm_bindkey viins '^[[2~' _shell_kit_ignore_insert
+  zvm_bindkey viins '^[[2;2~' _shell_kit_ignore_insert
+  if [[ -n "${terminfo[kich1]-}" ]]; then
+    zvm_bindkey viins "$terminfo[kich1]" _shell_kit_ignore_insert
+  fi
+
   _source_fzf key-bindings || source <(fzf --zsh)
 
   # Ctrl+Right -> move forward one word (^[[1;5C is the terminal escape code)
