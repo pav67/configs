@@ -2,6 +2,10 @@
 
 Kit personnel pour retrouver Zsh, tmux, Starship et les préférences Codex sur un nouveau poste Linux ou macOS. Le README sert de spécification du comportement et des raccourcis.
 
+## Bureau Hyprland
+
+Le [module bureau](desktop/README.md) ajoute Hyprland, Waybar, Fuzzel, l’historique du presse-papiers, le verrouillage, la gestion de l’inactivité, les captures, Thunar et le thème SDDM optionnel. Il dispose d’un installateur distinct (`./desktop/install.sh`) et n’est pas inclus dans `./install.sh --all`, pour préserver les installations de serveurs SSH.
+
 ## Installation
 
 ```bash

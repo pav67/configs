@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Ne pas conserver les sélections marquées confidentielles.
+case "${CLIPBOARD_STATE:-data}" in sensitive|nil|clear) exit 0 ;; esac
+mime_types=$(wl-paste --list-types 2>/dev/null) || exit 0
+if [[ "$mime_types" == *x-kde-passwordManagerHint* || "$mime_types" == *x-nsconcealed-type* ]]; then
+    exit 0
+fi
+# Précaution supplémentaire pour les copies depuis KeePassXC.
+if hyprctl activewindow -j 2>/dev/null | python3 -c 'import json,sys; sys.exit("keepassxc" not in json.load(sys.stdin).get("class", "").lower())'; then
+    exit 0
+fi
+exec cliphist store

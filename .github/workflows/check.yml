@@ -23,11 +23,12 @@ jobs:
         run: brew install shellcheck
       - name: Syntax and ShellCheck
         run: |
-          bash -n install.sh
+          bash -n install.sh desktop/install.sh desktop/bin/*
           zsh -n zshrc
-          shellcheck -x install.sh lib/*.sh profile-snippet.sh tmux/*.sh
+          shellcheck -x install.sh lib/*.sh profile-snippet.sh tmux/*.sh desktop/install.sh desktop/bin/*
       - name: Installer and themes
         run: |
+          python3 tests/check_desktop.py
           python3 tests/check_install.py
           python3 tests/check_theme.py
           python3 tests/check_native_identity.py

@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+capture_dir="$HOME/Images/Captures"
+mkdir -p "$capture_dir"
+mode="${1:-all}"
+geometry=""
+case "$mode" in
+    area) geometry=$(slurp -b '#11111bcc' -c '#cba6f7' -w 2) || exit 0 ;;
+    all) ;;
+    *) exit 2 ;;
+esac
+capture_file=$(mktemp "$capture_dir/Capture-$(date +%Y-%m-%d_%H-%M-%S)-XXXXXX.png")
+trap 'rm -f -- "$capture_file"' ERR
+if [[ "$mode" == area ]]; then
+    grim -g "$geometry" "$capture_file"
+else
+    grim "$capture_file"
+fi
+wl-copy --type image/png < "$capture_file"
+notify-send -a "Capture d’écran" 'Capture enregistrée et copiée' "$capture_file" >/dev/null 2>&1 || true

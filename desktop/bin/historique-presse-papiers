@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+selection=$(cliphist list | fuzzel --dmenu --prompt 'Historique ❯ ' --placeholder 'Rechercher une copie…') || exit 0
+[[ -n "$selection" ]] || exit 0
+printf '%s\n' "$selection" | cliphist decode | wl-copy

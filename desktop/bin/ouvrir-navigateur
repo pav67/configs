@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+for browser in google-chrome-stable google-chrome chromium firefox; do
+    if command -v "$browser" >/dev/null 2>&1; then exec "$browser" "$@"; fi
+done
+printf '%s\n' 'Aucun navigateur installé (Chrome, Chromium ou Firefox).' >&2
+exit 1

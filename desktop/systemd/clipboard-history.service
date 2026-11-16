@@ -1,0 +1,13 @@
+[Unit]
+Description=Historique du presse-papiers Wayland (cliphist)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+ExecStart=/usr/bin/wl-paste --watch %h/.local/bin/clipboard-store
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

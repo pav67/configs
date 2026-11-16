@@ -1,0 +1,21 @@
+* { font-family: "Noto Sans", "FontAwesome"; font-size: 13px; min-height: 0; border: none; }
+window#waybar { background: rgba(24, 24, 37, 0.96); color: #cdd6f4; border: 1px solid #45475a; border-radius: 16px; }
+#clock { font-weight: bold; color: #cdd6f4; padding: 0 16px; }
+#cpu, #memory, #network, #pulseaudio, #tray { margin: 6px 0; padding: 0 12px; border-radius: 10px; background: #313244; }
+#cpu { color: #fab387; }
+#memory { color: #f9e2af; }
+#network { color: #89dceb; }
+#network.disconnected { color: #f38ba8; }
+#pulseaudio { color: #a6e3a1; }
+#pulseaudio.muted { color: #6c7086; }
+#custom-session { color: #f38ba8; font-size: 17px; padding: 0 17px 0 12px; }
+tooltip { background: #1e1e2e; border: 1px solid #585b70; border-radius: 12px; }
+tooltip label { color: #cdd6f4; padding: 7px; }
+menu { background: #1e1e2e; color: #cdd6f4; border-radius: 10px; }
+
+/* Fenêtres ouvertes sur cet écran */
+#taskbar { margin: 5px 8px; }
+#taskbar button { padding: 0 12px; margin: 0 3px; border-radius: 10px; background: #313244; color: #a6adc8; }
+#taskbar button.active { background: #cba6f7; color: #181825; }
+#taskbar button:hover { background: #45475a; color: #cdd6f4; box-shadow: none; }
+#taskbar button image { margin-right: 7px; }

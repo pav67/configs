@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# La même combinaison ouvre ou ferme le lanceur.
+if pkill -x -u "$(id -u)" fuzzel; then
+    exit 0
+fi
+exec fuzzel "$@"
