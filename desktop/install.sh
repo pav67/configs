@@ -77,4 +77,4 @@ if [ "$sddm" = 1 ]; then
     sudo systemctl enable sddm.service
 fi
 printf '%s\n' 'Configuration installée. Reconnectez-vous pour charger le bureau et ses services.' \
-    'Super+Q : Kitty ; Super+C : navigateur ; Super+E : Thunar ; Super+L : verrouiller.'
+    'Super+T : Kitty ; Super+Q : fermer la fenêtre ; Super+C : navigateur ; Super+E : Thunar ; Super+L : verrouiller.'

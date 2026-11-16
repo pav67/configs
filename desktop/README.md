@@ -32,7 +32,7 @@ Les fichiers remplacés sont sauvegardés avec un suffixe `.bak.DATE-HEURE-PID`.
 
 ## Contenu
 
-- Hyprland : AZERTY français `fr/latin9`, raccourcis fenêtres, suppression du texte sur le fond par défaut.
+- Hyprland : AZERTY français `fr/latin9`, Verr Num activé au démarrage de la session, raccourcis fenêtres, suppression du texte sur le fond par défaut.
 - Keychron Q6 Max : **sélecteur matériel sur Win**, sans échange logiciel Alt/Super ; AltGr donne `@` avec `0`, `[` avec `5` et `]` avec `)`.
 - Fuzzel : Super + Espace, thème bleu nuit/lavande, police Noto Sans et coins arrondis. Marges intérieures de 28 px à gauche/droite et 24 px en haut/bas, avec 16 px entre recherche et résultats ; réglables dans `~/.config/fuzzel/fuzzel.ini`.
 - Waybar : thème sombre lavande, liste des fenêtres propres à chaque écran, horloge, CPU, mémoire, réseau, volume, zone de notification et menu de session.
@@ -51,7 +51,8 @@ Super correspond à la touche Windows.
 
 | Raccourci | Action |
 |---|---|
-| Super + Q | Kitty |
+| Super + T | Kitty |
+| Super + Q | Fermer la fenêtre active |
 | Super + C | Chrome, sinon Chromium ou Firefox |
 | Super + E | Thunar |
 | Super + Espace | Ouvrir / fermer le lanceur d’applications |
@@ -82,3 +83,7 @@ Le test installe les fichiers dans un HOME temporaire, vérifie les sauvegardes,
 ## Presse-papiers
 
 Cliphist conserve les copies de texte et d’images ; Super + V ouvre leur historique dans Fuzzel. Sélectionner un élément le remet dans le presse-papiers, puis Ctrl + V (Ctrl + Maj + V dans Kitty) le colle. La sélection seule à la souris n’est pas surveillée. Le service ignore les contenus marqués confidentiels et les copies lorsque KeePassXC est la fenêtre active ; les applications ne marquant pas leurs secrets peuvent néanmoins les laisser dans cet historique local. `cliphist wipe` efface l’historique.
+
+## Réveil des écrans
+
+Le réveil DPMS est activé directement dans Hyprland pour le clavier et la souris, en plus des commandes `on-resume` des deux règles hypridle. Cela évite de dépendre uniquement du listener d’extinction, dont l’événement de reprise peut être manqué après une inhibition. Les délais de verrouillage et d’extinction restent à 3 et 5 minutes.
