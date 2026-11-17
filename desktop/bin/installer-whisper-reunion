@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+base="$HOME/.local/opt/whisper.cpp"
+model="$HOME/.local/share/whisper/ggml-small.bin"
+cmake_bin=$(command -v cmake || true)
+if [[ -z "$cmake_bin" && -x "$HOME/.local/opt/reunion-build/cmake-3.31.6-linux-x86_64/bin/cmake" ]]; then
+    cmake_bin="$HOME/.local/opt/reunion-build/cmake-3.31.6-linux-x86_64/bin/cmake"
+fi
+if [[ -z "$cmake_bin" ]] || ! command -v c++ >/dev/null; then
+    echo 'Installer les outils : sudo apt install cmake g++ make git curl' >&2
+    exit 1
+fi
+mkdir -p "$(dirname "$base")" "$(dirname "$model")"
+if [[ ! -d "$base" ]]; then
+    git clone --depth 1 --branch v1.9.5 https://github.com/ggml-org/whisper.cpp.git "$base"
+fi
+"$cmake_bin" -S "$base" -B "$base/build" -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DWHISPER_BUILD_TESTS=OFF
+"$cmake_bin" --build "$base/build" --target whisper-cli -j 4
+if [[ ! -f "$model" ]]; then
+    curl -fL --retry 2 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin -o "$model.part"
+    mv "$model.part" "$model"
+fi
+printf '%s\n' 'Whisper prêt : modèle small multilingue, transcription locale en français.'

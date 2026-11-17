@@ -1,0 +1,11 @@
+[Unit]
+Description=Enregistrement local du microphone et de la réunion
+After=pipewire-pulse.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/reunion-audio record
+KillSignal=SIGINT
+KillMode=mixed
+TimeoutStopSec=300
+UMask=0077

@@ -29,6 +29,8 @@ jobs:
       - name: Installer and themes
         run: |
           python3 tests/check_desktop.py
+          python3 tests/check_reunion.py
+          python3 tests/check_reunion_report.py
           python3 tests/check_install.py
           python3 tests/check_theme.py
           python3 tests/check_native_identity.py

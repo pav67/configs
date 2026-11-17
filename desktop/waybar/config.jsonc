@@ -13,6 +13,7 @@
     "clock"
   ],
   "modules-right": [
+    "custom/reunion",
     "cpu",
     "memory",
     "network",
@@ -79,5 +80,13 @@
     "tooltip-format": "{title}",
     "on-click": "activate",
     "markup": false
+  },
+  "custom/reunion": {
+    "exec": "@HOME@/.local/bin/reunion-audio status",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "@HOME@/.local/bin/reunion-audio toggle",
+    "on-click-right": "@HOME@/.local/bin/reunion-audio menu",
+    "escape": true
   }
 }

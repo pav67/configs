@@ -87,3 +87,85 @@ Cliphist conserve les copies de texte et d’images ; Super + V ouvre leur histo
 ## Réveil des écrans
 
 Le réveil DPMS est activé directement dans Hyprland pour le clavier et la souris, en plus des commandes `on-resume` des deux règles hypridle. Cela évite de dépendre uniquement du listener d’extinction, dont l’événement de reprise peut être manqué après une inhibition. Les délais de verrouillage et d’extinction restent à 3 et 5 minutes.
+
+
+## Enregistrement des réunions
+
+Le bouton **● Réunion** de Waybar capture le microphone par défaut et le son de la
+sortie par défaut au moment du démarrage. Un clic démarre la capture ; le bouton
+rouge affiche la durée. Un second clic arrête et propose **Transcrire maintenant
+(français)**, **Ouvrir le dossier** ou **Plus tard**. Le clic droit retrouve les
+réunions précédentes pour les ouvrir ou les transcrire. Échap ferme le menu sans
+supprimer l'audio.
+
+Les fichiers restent dans `~/Documents/Reunions/AAAA-MM-JJ_HH-MM-SS/` :
+`micro.wav`, `interlocuteurs.wav`, `reunion.wav` (mixage), puis
+`transcription.txt`, `.srt` et `.md`. Le son reçu comprend tous les sons de la sortie
+choisie, y compris les notifications. Le microphone sélectionné doit être celui
+du casque ; relever sa perche coupe ta voix mais laisse enregistrer les interlocuteurs.
+Les sources restent fixes pendant la capture : arrêter et recommencer après un
+changement de casque/sortie. Prévenir les participants de l'enregistrement.
+
+Après installation des configurations, charger le service avec
+`systemctl --user daemon-reload` et recharger Waybar. La capture utilise `parec`
+(paquet `pulseaudio-utils`), Python 3 et le serveur PipeWire/PulseAudio existant.
+Il n'y a pas d'enregistrement automatique à la connexion.
+
+Pour préparer la transcription une fois :
+
+```bash
+sudo apt install cmake g++ make git curl
+~/.local/bin/installer-whisper-reunion
+```
+
+L'installateur compile whisper.cpp v1.9.5 et télécharge le modèle multilingue
+`small` (~466 Mio). Ensuite, la transcription est locale, en français, avec quatre
+threads CPU et une priorité réduite. Le temps de traitement dépend de la durée
+et du processeur ; les intervenants ne sont pas identifiés automatiquement.
+L'audio reste disponible si une transcription échoue. `whisper.log` contient les
+détails et le clic droit permet de réessayer. Les données ne sont jamais ajoutées
+au dépôt.
+
+La capture conserve les deux pistes et le mixage (environ 350 Mo par heure).
+Elle s'arrête si l'espace libre devient inférieur à 256 Mio ou après 12 heures.
+Un arrêt normal du service finalise les WAV ; une coupure brutale peut empêcher
+la création du mixage, mais les pistes déjà écrites restent dans le dossier.
+
+Validation : `python3 tests/check_reunion.py` teste deux sources synthétiques,
+l'arrêt propre, le mixage et l'export de transcription, sans capter un micro réel.
+
+
+### Compte rendu sur le serveur IA local
+
+Après une transcription, un menu propose **Générer le compte rendu**, **Ouvrir le
+dossier** ou **Plus tard**. Le clic droit sur le bouton Réunion permet aussi de
+sélectionner une réunion déjà transcrite et de demander son compte rendu.
+Le texte transcrit est envoyé uniquement après ce choix au serveur configuré dans
+`~/.config/reunion-audio/ai.json` (par défaut `http://192.168.80.109:1234/v1`, modèle
+`Qwen3.8-27B`). L'audio reste sur le poste. La configuration est préservée lors des
+réinstallations ; adapter `base_url`, `model` et `timeout` si nécessaire.
+
+Le résultat est écrit dans **CR.md**, dans le dossier de la réunion : synthèse,
+points abordés, décisions, tableau des actions et questions ouvertes. Relire le
+compte rendu, notamment les décisions et les noms. En cas de régénération, l'ancien
+CR est sauvegardé sous `CR.DATE-HEURE.bak.md`. En cas de serveur indisponible ou de
+réponse tronquée, l'ancien CR et la transcription sont conservés ; réessayer depuis
+le clic droit. La barre affiche « Compte rendu » pendant la génération. Le délai
+maximal d'attente réseau est de 600 secondes, et les transcriptions de plus de
+500 000 caractères sont refusées explicitement, sans troncature silencieuse.
+
+Validation : `python3 tests/check_reunion_report.py` vérifie la requête, l'écriture,
+la sauvegarde et la conservation du CR en cas d'échec ou de réponse incomplète.
+
+
+## Emails Outlook dans Chrome
+
+`outlook-flottant` écoute les événements Hyprland : une fenêtre Chrome créée avec
+le titre `about:blank - Google Chrome`, puis portant un titre terminé par
+` – Outlook - Google Chrome`, est rendue flottante et centrée (1100 × 900 au maximum,
+adapté à l'écran). La boîte de réception principale reste en mosaïque. Chaque
+fenêtre est traitée une seule fois pour respecter les changements manuels ultérieurs.
+Le programme démarre avec Hyprland ; après une installation sans reconnexion,
+lancer `~/.local/bin/outlook-flottant`. Super + Maj + V permet toujours de changer
+manuellement le mode d'une fenêtre. Si Chrome ou Outlook modifie ses titres,
+le critère devra être adapté.

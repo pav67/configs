@@ -27,8 +27,11 @@ with tempfile.TemporaryDirectory(prefix='desktop-') as tmp:
     waybar = json.loads((home / '.config/waybar/config.jsonc').read_text())
     assert waybar['modules-left'] == ['wlr/taskbar']
     assert waybar['wlr/taskbar']['all-outputs'] is False
+    assert 'custom/reunion' in waybar['modules-right']
+    assert (home / '.local/lib/reunion_audio.py').exists()
+    assert (home / '.config/systemd/user/reunion-audio.service').exists()
     ET.parse(home / '.config/waybar/session-menu.xml')
-    for name in ('capture-ecran', 'ouvrir-navigateur', 'lanceur-applications', 'clipboard-store', 'historique-presse-papiers'):
+    for name in ('capture-ecran', 'ouvrir-navigateur', 'lanceur-applications', 'clipboard-store', 'historique-presse-papiers', 'reunion-audio', 'installer-whisper-reunion'):
         assert (home / '.local/bin' / name).stat().st_mode & 0o111
     fuzzel = configparser.ConfigParser(interpolation=None)
     fuzzel.read(home / '.config/fuzzel/fuzzel.ini')

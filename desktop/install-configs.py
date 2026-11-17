@@ -37,9 +37,15 @@ copy('hypr/monitors-paul.conf' if use_paul_monitors else 'hypr/monitors.conf',
 for name in ('config.jsonc', 'style.css', 'session-menu.xml'):
     copy('waybar/' + name, '.config/waybar/' + name)
 copy('fuzzel/fuzzel.ini', '.config/fuzzel/fuzzel.ini')
-for name in ('capture-ecran', 'ouvrir-navigateur', 'lanceur-applications', 'clipboard-store', 'historique-presse-papiers'):
+for name in ('capture-ecran', 'ouvrir-navigateur', 'lanceur-applications', 'clipboard-store', 'historique-presse-papiers', 'reunion-audio', 'installer-whisper-reunion'):
     copy('bin/' + name, '.local/bin/' + name, executable=True)
 copy('backgrounds/voie-lactee.png', '.local/share/backgrounds/voie-lactee.png', binary=True)
 (home / 'Images/Captures').mkdir(parents=True, exist_ok=True)
 
 copy('systemd/clipboard-history.service', '.config/systemd/user/clipboard-history.service')
+
+copy('systemd/reunion-audio.service', '.config/systemd/user/reunion-audio.service')
+copy('lib/reunion_audio.py', '.local/lib/reunion_audio.py', executable=True)
+copy('reunion-audio/ai.json', '.config/reunion-audio/ai.json', preserve=True)
+copy('bin/outlook-flottant', '.local/bin/outlook-flottant', executable=True)
+copy('lib/outlook_floating.py', '.local/lib/outlook_floating.py')

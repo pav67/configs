@@ -19,3 +19,8 @@ menu { background: #1e1e2e; color: #cdd6f4; border-radius: 10px; }
 #taskbar button.active { background: #cba6f7; color: #181825; }
 #taskbar button:hover { background: #45475a; color: #cdd6f4; box-shadow: none; }
 #taskbar button image { margin-right: 7px; }
+
+/* Enregistrement des réunions */
+#custom-reunion { margin: 6px 0; padding: 0 12px; border-radius: 10px; background: #313244; color: #cba6f7; }
+#custom-reunion.recording { background: #f38ba8; color: #181825; font-weight: bold; }
+#custom-reunion.transcribing { color: #f9e2af; }
