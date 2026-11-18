@@ -169,3 +169,13 @@ Le programme démarre avec Hyprland ; après une installation sans reconnexion,
 lancer `~/.local/bin/outlook-flottant`. Super + Maj + V permet toujours de changer
 manuellement le mode d'une fenêtre. Si Chrome ou Outlook modifie ses titres,
 le critère devra être adapté.
+
+
+## Thème sombre et panneau audio
+
+Le clic sur le volume dans Waybar ouvre Pavucontrol en thème Adwaita sombre,
+dans une fenêtre flottante centrée de 900 × 650. Thunar utilise le même thème
+via Super + E, le lanceur et les ouvertures de dossiers par D-Bus/systemd.
+L'installateur déploie les entrées utilisateur correspondantes, sans modifier
+les fichiers système. Après réinstallation dans une session ouverte, exécuter
+`systemctl --user daemon-reload` et rouvrir Thunar pour appliquer le thème.

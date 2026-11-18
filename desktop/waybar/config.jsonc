@@ -53,7 +53,7 @@
         ""
       ]
     },
-    "on-click": "pavucontrol",
+    "on-click": "env GTK_THEME=Adwaita:dark pavucontrol",
     "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
     "scroll-step": 5
   },

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.xfce.Thunar
+Exec=/usr/bin/env GTK_THEME=Adwaita:dark /usr/bin/Thunar --gapplication-service
+SystemdService=thunar.service
