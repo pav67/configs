@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -u
+exec 9>"${XDG_RUNTIME_DIR:?}/verrouiller-session.lock"
+flock -n 9 || exit 0
+sudo -n /usr/local/libexec/keychron-numlock off || true
+hyprlock
+result=$?
+if [ "$result" -eq 0 ]; then
+    sudo -n /usr/local/libexec/keychron-numlock on || true
+fi
+exit "$result"

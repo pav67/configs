@@ -29,6 +29,9 @@ jobs:
       - name: Installer and themes
         run: |
           python3 tests/check_desktop.py
+          python3 tests/check_clipboard.py
+          python3 tests/check_tmux_sounds.py
+          python3 tests/check_numlock_session.py
           python3 tests/check_outlook_navigation.py
           python3 tests/check_reunion.py
           python3 tests/check_reunion_report.py

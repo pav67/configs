@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -u
+case "${1:-}" in
+    lock) exec "$HOME/.local/bin/verrouiller-session" ;;
+    logout|reboot|shutdown) ;;
+    *) echo 'Usage : session-action lock|logout|reboot|shutdown' >&2; exit 2 ;;
+esac
+sudo -n /usr/local/libexec/keychron-numlock off || true
+case "$1" in
+    logout) hyprctl dispatch exit ;;
+    reboot) systemctl reboot ;;
+    shutdown) systemctl poweroff ;;
+esac
+result=$?
+if [ "$result" -ne 0 ]; then
+    sudo -n /usr/local/libexec/keychron-numlock on || true
+fi
+exit "$result"

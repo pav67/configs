@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-selection=$(cliphist list | fuzzel --dmenu --prompt 'Historique ❯ ' --placeholder 'Rechercher une copie…') || exit 0
-[[ -n "$selection" ]] || exit 0
-printf '%s\n' "$selection" | cliphist decode | wl-copy
+systemctl --user start clipboard-history.service >/dev/null 2>&1 || true
+# Optional user installation of the Debian GTK bindings.
+gtk_root="$HOME/.local/opt/clipboard-gtk/usr/lib"
+if [[ -d "$gtk_root/python3/dist-packages/gi" ]]; then
+    export PYTHONPATH="$gtk_root/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}"
+    export GI_TYPELIB_PATH="$gtk_root/x86_64-linux-gnu/girepository-1.0${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
+    export LD_LIBRARY_PATH="$gtk_root/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+exec python3 "$HOME/.local/lib/clipboard_history.py"

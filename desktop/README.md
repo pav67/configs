@@ -59,7 +59,6 @@ Super correspond à la touche Windows.
 | Super + E | Thunar |
 | Super + Espace | Ouvrir / fermer le lanceur d’applications |
 | Super + R | Lanceur Fuzzel |
-| Super + M | Menu de sortie Hyprland, ou fin de session |
 | Super + L | Verrouiller |
 | Super + V | Historique du presse-papiers |
 | Super + Maj + V | Flottante / mosaïque |
@@ -84,7 +83,11 @@ Le test installe les fichiers dans un HOME temporaire, vérifie les sauvegardes,
 
 ## Presse-papiers
 
-Cliphist conserve les copies de texte et d’images ; Super + V ouvre leur historique dans Fuzzel. Sélectionner un élément le remet dans le presse-papiers, puis Ctrl + V (Ctrl + Maj + V dans Kitty) le colle. La sélection seule à la souris n’est pas surveillée. Le service ignore les contenus marqués confidentiels et les copies lorsque KeePassXC est la fenêtre active ; les applications ne marquant pas leurs secrets peuvent néanmoins les laisser dans cet historique local. `cliphist wipe` efface l’historique.
+Cliphist conserve jusqu’à 2 000 copies de texte et d’images ; Super + V ouvre un panneau GTK sombre, avec recherche et défilement de tout l’historique. La hauteur des lignes suit le contenu : texte sur une à quatre lignes, miniature PNG/JPEG jusqu’à 320 × 160 pixels. Le panneau réserve une surface allant jusqu’à 1 000 × 1 000 pixels, selon l’écran, pour afficher plusieurs éléments à la fois. Le service reprend automatiquement après une interruption de la session ; les captures sont aussi ajoutées directement à l’historique. Sélectionner un élément le remet dans le presse-papiers et le colle automatiquement dans la fenêtre d’origine (Ctrl + V, ou Ctrl + Maj + V dans Kitty). Si la fenêtre active a changé, seul le presse-papiers est mis à jour. La sélection seule à la souris n’est pas surveillée. Le service ignore les contenus marqués confidentiels et les copies lorsque KeePassXC est la fenêtre active ; les applications ne marquant pas leurs secrets peuvent néanmoins les laisser dans cet historique local. `cliphist wipe` efface l’historique, mais conserve les favoris.
+
+L’étoile ☆ (ou Ctrl + P) épingle un élément ; ★ le désépingle. Les favoris apparaissent en tête et leur contenu est conservé dans `~/.local/share/clipboard-pins` (ou `$XDG_DATA_HOME/clipboard-pins`), indépendamment de la rotation de l’historique. Épingler ne déclenche pas de collage. Entrée ou un clic sur la ligne colle ; Échap ferme le panneau.
+
+Le panneau nécessite `python3-gi`, `gir1.2-gtk-3.0` et `gir1.2-gtklayershell-0.1`, inclus dans l’installateur Debian. Le lanceur accepte aussi les bibliothèques Debian extraites dans `~/.local/opt/clipboard-gtk`, pour une installation utilisateur sans droits administrateur.
 
 ## Réveil des écrans
 
@@ -261,3 +264,39 @@ Les erreurs sont consignées dans `~/.local/state/outlook-navigation.log`.
 Validation : `python3 tests/check_outlook_navigation.py` couvre la sélection de la
 fenêtre principale, les deux sens, la conservation de l'ancien message en cas
 d'échec et la transmission du raccourci aux autres applications.
+
+
+## Verr Num et verrouillage de session (Keychron)
+
+Installer une fois l'accès restreint au clavier avec :
+
+```bash
+bash ~/configs/desktop/install-numlock.sh
+```
+
+Ce script demande sudo, installe un outil root limité aux commandes `on` et `off`
+sur les claviers physiques Keychron, une règle sudoers autorisant uniquement ces
+deux appels, un service système d'arrêt et le réglage SDDM `Numlock=off`.
+Il teste off/on sans verrouiller ni fermer la session. Le code root est installé
+hors du HOME et exécuté par Python en mode isolé. Il ne permet pas d'injecter des
+caractères arbitraires. Cette installation système est distincte de
+`--configure-only`.
+
+Super + L, le menu Waybar et le verrouillage automatique passent par
+`verrouiller-session` : Verr Num est désactivé avant hyprlock, puis réactivé après
+un déverrouillage réussi. Les actions de sortie de Waybar désactivent Verr Num
+avant de quitter/redémarrer/éteindre. Le service système le désactive aussi avant
+l'arrêt du gestionnaire d'affichage. Hyprland garde `numlock_by_default=true` pour
+la nouvelle session et un appel `on` au démarrage ; SDDM demande l'état désactivé
+sur l'écran de connexion. L'état après coupure d'alimentation ou dans le BIOS
+reste contrôlé par le matériel.
+
+Utiliser le raccourci/menu ou `~/.local/bin/verrouiller-session` pour verrouiller :
+un appel direct à `hyprlock` ne passe pas par ces hooks. Sans l'installation
+administrateur, le verrouillage reste possible mais Verr Num n'est pas modifié.
+Les tests `tests/check_numlock_session.py` simulent les commandes sans agir sur
+la session ni sur le matériel.
+
+## Sons des Codex distants
+
+Le [relais tmux](tmux-sounds/README.md) attribue un son aléatoire parmi 20 à chaque fenêtre distante, puis conserve ce son pour ses notifications suivantes.

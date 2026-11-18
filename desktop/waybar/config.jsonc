@@ -27,12 +27,12 @@
     "tooltip-format": "{:%A %d %B %Y}"
   },
   "cpu": {
-    "format": "  {usage}%",
+    "format": "  <span font_family='monospace'>{usage:3}%</span>",
     "interval": 3,
     "tooltip": true
   },
   "memory": {
-    "format": "  {percentage}%",
+    "format": "  <span font_family='monospace'>{percentage:3}%</span>",
     "interval": 5,
     "tooltip-format": "Mémoire : {used:0.1f} / {total:0.1f} Gio"
   },
@@ -67,10 +67,10 @@
     "menu": "on-click",
     "menu-file": "@HOME@/.config/waybar/session-menu.xml",
     "menu-actions": {
-      "logout": "hyprctl dispatch exit",
-      "reboot": "systemctl reboot",
-      "shutdown": "systemctl poweroff",
-      "lock": "hyprlock"
+      "logout": "@HOME@/.local/bin/session-action logout",
+      "reboot": "@HOME@/.local/bin/session-action reboot",
+      "shutdown": "@HOME@/.local/bin/session-action shutdown",
+      "lock": "@HOME@/.local/bin/session-action lock"
     }
   },
   "wlr/taskbar": {

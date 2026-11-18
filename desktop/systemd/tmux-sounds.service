@@ -1,0 +1,13 @@
+[Unit]
+Description=Sons des fenêtres tmux distantes
+After=graphical-session.target
+PartOf=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/lib/tmux_sounds.py --host codexops@192.168.80.120
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

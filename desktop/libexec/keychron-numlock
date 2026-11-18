@@ -1,0 +1,52 @@
+#!/usr/bin/python3 -I
+"""Root-only, fixed-purpose Num Lock setter for Keychron physical keyboards."""
+import fcntl
+import os
+from pathlib import Path
+import struct
+import sys
+import time
+
+
+def set_numlock(enabled):
+    changed = 0
+    for entry in Path('/sys/class/input').glob('event*'):
+        device = entry / 'device'
+        try:
+            name = (device / 'name').read_text().lower()
+            leds = int((device / 'capabilities/led').read_text().strip().split()[-1], 16)
+        except (OSError, ValueError):
+            continue
+        if 'keychron' not in name or not leds & 1:
+            continue
+        with open('/dev/input/' + entry.name, 'r+b', buffering=0) as keyboard:
+            def state():
+                data = bytearray(1)
+                fcntl.ioctl(keyboard, 0x80014519, data)  # EVIOCGLED(1), LED_NUML=0
+                return bool(data[0] & 1)
+            if state() == enabled:
+                changed += 1
+                continue
+            # Inject only KEY_NUMLOCK on the physical device, never arbitrary keys.
+            keyboard.write(b''.join(struct.pack('@llHHi', 0, 0, kind, code, value)
+                                    for kind, code, value in ((1,69,1),(0,0,0),(1,69,0),(0,0,0))))
+            for _ in range(20):
+                if state() == enabled:
+                    changed += 1
+                    break
+                time.sleep(0.05)
+            else:
+                raise RuntimeError('Le clavier n’a pas confirmé le changement de Verr Num.')
+    if not changed:
+        raise RuntimeError('Aucun clavier Keychron avec Verr Num trouvé.')
+
+
+if __name__ == '__main__':
+    if os.geteuid() != 0 or sys.argv[1:] not in (['on'], ['off']):
+        sys.exit('Usage administrateur : keychron-numlock on|off')
+    with open('/run/keychron-numlock.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            set_numlock(sys.argv[1] == 'on')
+        except Exception as exc:
+            sys.exit(str(exc))

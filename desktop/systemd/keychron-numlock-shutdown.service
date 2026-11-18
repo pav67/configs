@@ -1,0 +1,13 @@
+[Unit]
+Description=Disable Keychron Num Lock before stopping the display manager
+After=display-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=/usr/local/libexec/keychron-numlock off
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical.target

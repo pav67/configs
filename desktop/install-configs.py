@@ -43,6 +43,8 @@ copy('backgrounds/voie-lactee.png', '.local/share/backgrounds/voie-lactee.png', 
 (home / 'Images/Captures').mkdir(parents=True, exist_ok=True)
 
 copy('systemd/clipboard-history.service', '.config/systemd/user/clipboard-history.service')
+copy('lib/clipboard_history.py', '.local/lib/clipboard_history.py')
+copy('lib/clipboard_picker.py', '.local/lib/clipboard_picker.py')
 
 copy('systemd/reunion-audio.service', '.config/systemd/user/reunion-audio.service')
 copy('lib/reunion_audio.py', '.local/lib/reunion_audio.py', executable=True)
@@ -60,3 +62,5 @@ if Path('/usr/share/applications/teams-for-linux.desktop').exists():
 copy('xkb/keychron-fr.xkb', '.config/xkb/keychron-fr.xkb')
 copy('bin/outlook-navigation', '.local/bin/outlook-navigation', executable=True)
 copy('lib/outlook_navigation.py', '.local/lib/outlook_navigation.py')
+copy('bin/session-action', '.local/bin/session-action', executable=True)
+copy('bin/verrouiller-session', '.local/bin/verrouiller-session', executable=True)

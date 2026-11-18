@@ -36,7 +36,7 @@ if [ "$packages" = 1 ]; then
     if [[ $(apt-cache policy) != *trixie-backports* ]]; then
         echo 'Activer trixie-backports (main) avant de relancer cet installateur.' >&2; exit 1
     fi
-    deps=(python3 hyprland fuzzel kitty waybar swaybg hyprlock hypridle
+    deps=(python3 python3-gi gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 hyprland fuzzel kitty waybar swaybg hyprlock hypridle
         thunar thunar-archive-plugin file-roller gvfs-backends
         fonts-font-awesome fonts-noto-core pavucontrol pipewire-audio pulseaudio-utils
         grim slurp wl-clipboard cliphist libnotify-bin xdg-utils)

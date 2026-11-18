@@ -17,5 +17,12 @@ if [[ "$mode" == area ]]; then
 else
     grim "$capture_file"
 fi
-wl-copy --type image/png < "$capture_file"
-notify-send -a "Capture d’écran" 'Capture enregistrée et copiée' "$capture_file" >/dev/null 2>&1 || true
+trap - ERR
+if wl-copy --type image/png < "$capture_file"; then
+    # Conserver aussi la capture si le service d’historique redémarre.
+    cliphist -max-items 2000 store < "$capture_file" || true
+    message='Capture enregistrée et copiée'
+else
+    message='Capture enregistrée — copie impossible'
+fi
+notify-send -a "Capture d’écran" -i "$capture_file" "$message" "$capture_file" >/dev/null 2>&1 || true

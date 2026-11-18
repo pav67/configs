@@ -10,4 +10,4 @@ fi
 if hyprctl activewindow -j 2>/dev/null | python3 -c 'import json,sys; sys.exit("keepassxc" not in json.load(sys.stdin).get("class", "").lower())'; then
     exit 0
 fi
-exec cliphist store
+exec cliphist -max-items 2000 store
