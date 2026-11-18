@@ -10,7 +10,10 @@ from unittest.mock import patch
 module = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'desktop/lib/reunion_audio.py'))
 g = module['archive_report'].__globals__
 with tempfile.TemporaryDirectory() as tmp:
-    home = Path(tmp); root=home/'recordings'; state=home/'state'; vault=home/'vault'
+    # Exercise the alias used by macOS temporary paths on every platform.
+    actual_home = Path(tmp) / 'actual-home'; actual_home.mkdir()
+    home = Path(tmp) / 'home'; home.symlink_to(actual_home, target_is_directory=True)
+    root=home/'recordings'; state=home/'state'; vault=home/'vault'
     for p in (root,state,vault/'Projet A'): p.mkdir(parents=True)
     config=home/'.config/reunion-audio';config.mkdir(parents=True)
     (config/'obsidian.json').write_text(json.dumps({'vault':str(vault),'projects':{'Projet A':'Projet A'}}))
@@ -70,7 +73,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (vault/'Projet A'/'.private'/'Hidden').mkdir(parents=True)
     (vault/'Projet A'/'Linked').symlink_to(outside,target_is_directory=True)
     projects=g['obsidian_projects']()
-    assert projects['Projet A/Client/Comptes rendus']==nested
+    assert projects['Projet A/Client/Comptes rendus']==nested.resolve()
     assert not any('private' in label or 'Linked' in label for label in projects)
     auto=home/'.config/obsidian';auto.mkdir()
     (auto/'obsidian.json').write_text(json.dumps({'vaults':{'test':{'path':str(vault),'open':True}}}))
@@ -79,7 +82,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (config/'obsidian.json').write_text(custom)
     g['active']=lambda *_:False
     result=g['archive_report'](d,'Projet A/Client/Comptes rendus')
-    assert result.parent==nested and result.exists() and not d.exists()
+    assert result.parent==nested.resolve() and result.exists() and not d.exists()
     # Configured project must stay within the vault.
     (config/'obsidian.json').write_text(json.dumps({'vault':str(vault),'projects':{'Bad':'../outside'}}))
     try:g['obsidian_projects']()
