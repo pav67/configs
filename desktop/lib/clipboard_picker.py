@@ -6,7 +6,7 @@ gi.require_version('Gdk', '3.0')
 gi.require_version('GdkPixbuf', '2.0')
 gi.require_version('GtkLayerShell', '0.1')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GLib, Pango, GtkLayerShell
-from clipboard_history import content_id, mime_type, run, set_pin
+from clipboard_history import active_monitor, content_id, mime_type, run, set_pin
 import subprocess
 
 
@@ -34,7 +34,7 @@ window entry selection { color: #ffffff; background: #665484; }
 
 
 class Picker:
-    def __init__(self, entries, pins):
+    def __init__(self, entries, pins, target_window=None):
         self.result = None
         self.seen = set()
         self.entries = iter(entries)
@@ -45,9 +45,17 @@ class Picker:
         GtkLayerShell.set_layer(self.window, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self.window, GtkLayerShell.KeyboardMode.EXCLUSIVE)
         display = Gdk.Display.get_default()
-        pointer = display.get_default_seat().get_pointer()
-        _, x, y = pointer.get_position()
-        monitor = display.get_monitor_at_point(x, y)
+        # Wayland does not expose reliable global pointer coordinates to GTK.
+        # Match Hyprland's active output to GTK's connector name instead.
+        output = active_monitor(target_window or {})
+        monitor = None
+        if output:
+            screen = Gdk.Screen.get_default()
+            for index in range(display.get_n_monitors()):
+                candidate = display.get_monitor(index)
+                if screen.get_monitor_plug_name(index) == output['name']:
+                    monitor = candidate
+                    break
         if monitor:
             GtkLayerShell.set_monitor(self.window, monitor)
         geometry = monitor.get_geometry() if monitor else None
@@ -220,9 +228,17 @@ class Picker:
         return False
 
 
-def choose(entries, pins):
-    picker = Picker(entries, pins)
+def choose(entries, pins, target_window=None):
+    picker = Picker(entries, pins, target_window)
     Gtk.main()
     if picker.loading:
         GLib.source_remove(picker.source)
+    # Gtk.main_quit stops dispatching before the destroyed layer has necessarily
+    # released its exclusive keyboard grab. Flush and complete the round trip
+    # before sending paste to the application beneath it.
+    display = Gdk.Display.get_default()
+    display.sync()
+    while Gtk.events_pending():
+        Gtk.main_iteration_do(False)
+    display.flush()
     return picker.result

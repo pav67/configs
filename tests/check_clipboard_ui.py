@@ -5,6 +5,8 @@ Never reads or writes the user's clipboard or history.
 """
 from pathlib import Path
 import os
+import json
+import subprocess
 import struct
 import sys
 import tempfile
@@ -29,6 +31,11 @@ with tempfile.TemporaryDirectory() as directory:
 
     def check():
         try:
+            monitors = json.loads(subprocess.check_output(['hyprctl', 'monitors', '-j']))
+            focused = next(m['name'] for m in monitors if m['focused'])
+            layers = json.loads(subprocess.check_output(['hyprctl', 'layers', '-j']))
+            assert any(layer.get('namespace') == 'clipboard-history'
+                       for group in layers[focused]['levels'].values() for layer in group)
             rows = picker.list.get_children()
             heights = [r.get_allocated_height() for r in rows]
             viewport = picker.list.get_parent().get_allocation().height

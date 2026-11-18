@@ -53,9 +53,9 @@ for selected in (png, None):
             copy.assert_called_once_with(png)
             paste.assert_called_once_with(window)
 
-with patch.object(m, 'active_window', return_value={'address': '0x456'}), patch.object(m.subprocess, 'run') as dispatch:
+with patch.object(m, 'active_window', return_value={'address': '0x456'}), patch.object(m.time, 'sleep'), patch.object(m.subprocess, 'run') as dispatch:
     m.paste_to_window(window)
-    dispatch.assert_not_called()
+    assert all(call.args[0][2] != 'sendshortcut' for call in dispatch.call_args_list)
 for app, modifiers in [('kitty', 'CTRL SHIFT'), ('google-chrome', 'CTRL')]:
     with patch.object(m, 'active_window', return_value=window), patch.object(m.subprocess, 'run') as dispatch:
         m.paste_to_window({**window, 'class': app})
@@ -74,3 +74,14 @@ with tempfile.TemporaryDirectory() as directory:
                    env={**os.environ, 'HOME': directory, 'PATH': str(binary) + ':' + os.environ['PATH']}, check=True)
     assert list((temp_home / 'Images/Captures').glob('*.png'))
 print('Persistent pins, binary copy, cancellation, targeted paste, capture preservation: OK')
+
+# Monitor order differs from compositor IDs; use the target's ID, then focused output.
+monitors = b'[{"id":2,"name":"DP-7","focused":false},{"id":0,"name":"DP-4","focused":true}]'
+with patch.object(m, 'run', return_value=SimpleNamespace(stdout=monitors)):
+    assert m.active_monitor({'monitor': 0})['name'] == 'DP-4'
+    assert m.active_monitor({'monitor': 2})['name'] == 'DP-7'
+    assert m.active_monitor({})['name'] == 'DP-4'
+with patch.object(m, 'active_window', side_effect=[{}, {}, window]), patch.object(m.time, 'sleep'), patch.object(m.subprocess, 'run') as dispatch:
+    m.paste_to_window(window)
+    assert dispatch.call_args_list[0].args[0][2] == 'focuswindow'
+    assert dispatch.call_args_list[-1].args[0][-1] == 'CTRL,v,address:0x123'

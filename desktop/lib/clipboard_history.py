@@ -25,16 +25,29 @@ def paste_to_window(window):
     address = window.get('address')
     if not address:
         return
-    # Let the layer-shell menu release keyboard focus. Never paste into a
-    # different window if the user switched applications while choosing.
-    time.sleep(0.15)
-    if active_window().get('address') != address:
+    # Closing the overlay may restore another window under the pointer.
+    # Restore the original target, then wait for the compositor to confirm it.
+    subprocess.run(['hyprctl', 'dispatch', 'focuswindow', f'address:{address}'],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    for _ in range(20):
+        time.sleep(0.05)
+        if active_window().get('address') == address:
+            break
+    else:
         return
     modifiers = 'CTRL SHIFT' if window.get('class', '').lower() == 'kitty' else 'CTRL'
     subprocess.run(['hyprctl', 'dispatch', 'sendshortcut',
                     f'{modifiers},v,address:{address}'],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
 
+
+def active_monitor(window):
+    try:
+        monitors = json.loads(run(['hyprctl', 'monitors', '-j'], timeout=2).stdout)
+        return next((m for m in monitors if m['id'] == window.get('monitor')),
+                    next((m for m in monitors if m.get('focused')), None))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
 
 
 def mime_type(data):
@@ -98,7 +111,7 @@ def main():
     from clipboard_picker import choose
     window = active_window()
     entries = run(['cliphist', 'list']).stdout.splitlines()
-    data = choose(entries, read_pins())
+    data = choose(entries, read_pins(), window)
     if data is not None:
         copy_content(data)
         paste_to_window(window)
