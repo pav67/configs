@@ -53,3 +53,10 @@ copy('applications/thunar.desktop', '.local/share/applications/thunar.desktop')
 copy('dbus-1/services/org.xfce.Thunar.service', '.local/share/dbus-1/services/org.xfce.Thunar.service')
 copy('dbus-1/services/org.xfce.FileManager.service', '.local/share/dbus-1/services/org.xfce.FileManager.service')
 copy('systemd/thunar.service.d/theme.conf', '.config/systemd/user/thunar.service.d/theme.conf')
+
+copy('icons/teams-for-linux-simple.svg', '.local/share/icons/hicolor/scalable/apps/teams-for-linux-simple.svg')
+if Path('/usr/share/applications/teams-for-linux.desktop').exists():
+    copy('applications/teams-for-linux.desktop', '.local/share/applications/teams-for-linux.desktop')
+copy('xkb/keychron-fr.xkb', '.config/xkb/keychron-fr.xkb')
+copy('bin/outlook-navigation', '.local/bin/outlook-navigation', executable=True)
+copy('lib/outlook_navigation.py', '.local/lib/outlook_navigation.py')

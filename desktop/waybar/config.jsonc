@@ -37,9 +37,9 @@
     "tooltip-format": "Mémoire : {used:0.1f} / {total:0.1f} Gio"
   },
   "network": {
-    "format-ethernet": "  Connecté",
+    "format-ethernet": "",
     "format-wifi": "  {essid}",
-    "format-disconnected": "  Hors ligne",
+    "format-disconnected": "",
     "tooltip-format": "{ifname} · {ipaddr}",
     "max-length": 22
   },

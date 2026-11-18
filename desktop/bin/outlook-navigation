@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "$HOME/.local/state"
+exec python3 "$HOME/.local/lib/outlook_navigation.py" "$@" >> "$HOME/.local/state/outlook-navigation.log" 2>&1

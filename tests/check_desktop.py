@@ -20,7 +20,9 @@ with tempfile.TemporaryDirectory(prefix='desktop-') as tmp:
         subprocess.run(['bash', str(root / 'desktop/install.sh'), '--configure-only'], env=env, check=True)
     hypr = home / '.config/hypr'
     config = (hypr / 'hyprland.conf').read_text()
-    assert 'kb_file' not in config and 'swap_alt' not in config
+    assert 'swap_alt' not in config
+    assert 'name = keychron--keychron-link--keyboard' in config
+    assert (home / '.config/xkb/keychron-fr.xkb').exists()
     assert 'kb_layout = fr' in config and 'kb_options =' in config
     assert 'monitor = , preferred, auto, auto' in (hypr / 'monitors.conf').read_text()
     assert str(home) in config and '/home/paul' not in config

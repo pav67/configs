@@ -1,0 +1,10 @@
+xkb_keymap {
+    xkb_keycodes { include "evdev+aliases(azerty)" };
+    xkb_types { include "complete" };
+    xkb_compatibility { include "complete" };
+    xkb_symbols {
+        include "pc+fr(latin9)+inet(evdev)"
+        replace key <FK15> { type[Group1] = "ONE_LEVEL", [ less ] };
+        replace key <FK16> { type[Group1] = "ONE_LEVEL", [ greater ] };
+    };
+};

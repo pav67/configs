@@ -51,6 +51,8 @@ Super correspond à la touche Windows.
 
 | Raccourci | Action |
 |---|---|
+| Molette / touches volume | Volume ±5 %, maximum 100 % |
+| Bouton muet / pression sur la molette (si configurée en Mute) | Couper / rétablir le son |
 | Super + T | Kitty |
 | Super + Q | Fermer la fenêtre active |
 | Super + C | Chrome, sinon Chromium ou Firefox |
@@ -179,3 +181,83 @@ via Super + E, le lanceur et les ouvertures de dossiers par D-Bus/systemd.
 L'installateur déploie les entrées utilisateur correspondantes, sans modifier
 les fichiers système. Après réinstallation dans une session ouverte, exécuter
 `systemctl --user daemon-reload` et rouvrir Thunar pour appliquer le thème.
+
+
+### Classement des CR dans Obsidian et gestion des réunions
+
+La liste du clic droit affiche `[Audio] Réunion du jj/mm/aaaa à hh:mm (durée)`
+ou `[Transcript]` quand une transcription existe. La durée provient du WAV ; les
+anciens enregistrements sont reconnus sans migration. Le sous-menu propose
+**Supprimer la réunion**, avec confirmation explicite ; une réunion en cours de
+capture ou de traitement ne peut pas être supprimée.
+
+Après génération du CR, la fenêtre **Classer le CR dans Obsidian — Projet** propose
+une liste de projets recherchable. Par défaut, elle lit le coffre ouvert dans
+Obsidian et liste ses dossiers et sous-dossiers à tous les niveaux (hors dossiers cachés et liens).
+Les chemins sont affichés, par exemple `Kitry/PARIS`, et sont recherchables.
+Avec une configuration explicite, les sous-dossiers des projets déclarés sont également proposés.
+Choisir un projet copie le CR sous `CR - AAAA-MM-JJ à HHhMMmSSs.md`, vérifie son
+contenu et sa sauvegarde disque, puis supprime **tout le dossier d'enregistrement**
+(audio, transcription, journaux et CR source). Un nom déjà utilisé reçoit un suffixe
+numérique ; aucune note existante n'est écrasée. Annuler ou choisir **Plus tard**
+conserve l'enregistrement. On peut reprendre via **Classer le CR dans Obsidian**
+dans le sous-menu. Un export en échec conserve le dossier source.
+
+Pour choisir explicitement les projets/dossiers, créer
+`~/.config/reunion-audio/obsidian.json`, par exemple :
+
+```json
+{
+  "vault": "/home/paul/obsidian/PaulWS",
+  "projects": {
+    "Kitry": "Kitry",
+    "Perso": "Perso"
+  }
+}
+```
+
+Les chemins des projets sont relatifs au coffre et doivent rester à l'intérieur.
+La configuration utilisateur n'est pas remplacée par l'installateur. Aucun
+classement ni nettoyage des anciens enregistrements n'est effectué automatiquement
+à l'installation. Le dernier export est référencé dans
+`~/.local/state/reunion-audio/last-export.json`.
+
+`python3 tests/check_reunion_lifecycle.py` vérifie les libellés, les états,
+l'export, les collisions de noms, les erreurs disque et les protections de suppression.
+
+Pendant la transcription, Waybar affiche `✎ 42 %`, à partir de la progression
+réelle fournie par Whisper. Le pourcentage avance par paliers, pas forcément
+linéairement dans le temps ; le chargement du modèle commence à 0 %. Pour une
+transcription lancée avant cette mise à jour, `≈` signale une estimation à partir
+des passages déjà transcrits. Le service en cours n'est pas redémarré.
+
+Les deux touches personnalisables du Keychron identifiées comme `XF86Launch6`
+et `XF86Launch7` produisent désormais respectivement `<` et `>`. Le fichier
+`~/.config/xkb/keychron-fr.xkb` conserve AZERTY `fr/latin9` et les touches multimédias.
+Il est appliqué uniquement au périphérique `keychron--keychron-link--keyboard` ;
+Ctrl reste utilisable avec ces caractères. En cas de changement de connexion
+USB/Bluetooth, vérifier le nom du périphérique avec `hyprctl devices`.
+
+
+### Navigation dans les emails Outlook détachés
+
+Depuis un message ouvert en fenêtre flottante, **Ctrl + touche personnalisable >**
+ouvre le message suivant et **Ctrl + touche personnalisable <** le précédent.
+Les bindings utilisent les codes physiques XKB 194 et 193 du Keychron.
+`outlook-navigation` envoie Bas/Haut puis Maj + Entrée à la fenêtre principale
+Outlook. Après apparition de la nouvelle fenêtre, il conserve la taille et la
+position de la précédente, puis ferme celle-ci. Si aucune nouvelle fenêtre
+n'apparaît sous 12 secondes, l'ancienne reste ouverte. Les frappes répétées pendant
+une navigation sont ignorées.
+
+Utiliser ces raccourcis en **lecture**, pas dans un brouillon. La fenêtre principale
+doit rester ouverte sur la liste des messages avec la sélection correspondant au
+message détaché. Une sélection changée manuellement dans la liste change le point
+de départ de la navigation. Une seule fenêtre principale par compte/écran est
+recommandée. Le comportement aux limites de la liste dépend d'Outlook. Hors d'une
+fenêtre de message Outlook, Ctrl + < / > est retransmis à l'application active.
+Les erreurs sont consignées dans `~/.local/state/outlook-navigation.log`.
+
+Validation : `python3 tests/check_outlook_navigation.py` couvre la sélection de la
+fenêtre principale, les deux sens, la conservation de l'ancien message en cas
+d'échec et la transmission du raccourci aux autres applications.
